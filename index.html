@@ -4,17 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GRANTOP • Finanças V2</title>
-  <link rel="icon" href="logo.png" />
+
+  <!-- O arquivo precisa existir com este nome, na mesma pasta -->
+  <link rel="icon" href="./logo.png" />
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- CONFIG INLINE -->
   <script>
+    // ====== PREENCHA AQUI SEU WEB APP ======
     window.GRANTOP_CFG = {
-      // Cole aqui o seu URL de Web App publicado (JSONP):
       API_URL: "https://script.google.com/macros/s/AKfycbzjSd2ZgYdAe4fRnrTO7TA12d1yZKFrDEfU4s10acjdPsLjQMq6Q9-wty_q5hFYyhX4EA/exec",
       TOKEN: "2400",
-      // Apenas para o link "Abrir planilha"
-      SS_ID: "1qDYeyVSAlOFfUEMiJhAEYiOzW7PitpKh1eJWd83R8Bs"
+      SS_ID: "1qDYeyVSAlOFfUEMiJhAEYiOzW7PitpKh1eJWd83R8Bs",
+      // PIN visual (somente HTML). Altere aqui se quiser outro.
+      UI_PIN: "2400"
     };
   </script>
 
@@ -32,13 +35,34 @@
     thead { background:#0b1220 }
     .pill{ border:1px solid var(--border); padding:.2rem .5rem; border-radius:999px; font-size:.75rem }
     a.link { color:#93c5fd; text-decoration: underline; }
+    #errorBar{ display:none; }
+    #errorBar.show{ display:block; }
+
+    /* PIN overlay */
+    #pinGate{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      background:#0b1220; z-index:9999; }
+    #pinPane{ background:#0f172a; border:1px solid #334155; padding:20px; border-radius:12px; width:320px; }
   </style>
 </head>
 <body>
+  <!-- PIN GATE (somente HTML) -->
+  <div id="pinGate">
+    <div id="pinPane">
+      <div class="flex items-center gap-2 mb-3">
+        <img src="./logo.png" alt="GRANTOP" class="h-8 w-auto" />
+        <h3 class="font-semibold">Proteção com PIN</h3>
+      </div>
+      <p class="text-sm opacity-80 mb-3">Informe o PIN para abrir o painel.</p>
+      <input id="pinInput" type="password" class="w-full border rounded px-2 py-2 mb-3" placeholder="PIN" />
+      <button id="pinBtn" class="btn w-full">Entrar</button>
+      <div id="pinErr" class="text-rose-300 text-xs mt-2 hidden">PIN incorreto.</div>
+    </div>
+  </div>
+
   <!-- HEADER -->
   <header class="p-4 md:p-6 bg-[#0f172a] shadow flex items-center justify-between border-b border-slate-700">
     <div class="flex items-center gap-3">
-      <img src="logo.png" alt="GRANTOP" class="h-10 w-auto" />
+      <img src="./logo.png" alt="GRANTOP" class="h-10 w-auto" />
       <h1 class="text-lg md:text-xl font-bold">GRANTOP • Finanças</h1>
       <span id="conn" class="text-xs text-slate-300">Conectando…</span>
     </div>
@@ -55,7 +79,12 @@
     </div>
   </header>
 
-  <!-- CARDS DE TOTALIZAÇÃO -->
+  <!-- BARRA DE ERRO -->
+  <div id="errorBar" class="mx-4 mt-3 mb-0 p-3 rounded-md bg-rose-950/50 border border-rose-600 text-rose-200 text-sm">
+    <b>Falha de conexão:</b> <span id="errorMsg"></span>
+  </div>
+
+  <!-- CARDS DE TOTALIZAÇÃO (topo) -->
   <section class="grid md:grid-cols-4 gap-4 p-4">
     <div class="p-4 card"><div class="text-sm opacity-70">Créditos (Total)</div><div id="kCredTot" class="text-xl font-bold">R$ 0,00</div></div>
     <div class="p-4 card"><div class="text-sm opacity-70">Folha (Total)</div><div id="kFuncTot" class="text-xl font-bold">R$ 0,00</div></div>
@@ -166,23 +195,10 @@
       </div>
     </section>
 
-    <!-- CONTAS DA EMPRESA (placeholder seguro) -->
-    <section id="tab-contas" class="card p-4 hidden">
-      <h2 class="font-semibold mb-1">Contas da Empresa</h2>
-      <div class="text-sm opacity-80">Interface preparada. Integração de API será habilitada na próxima revisão.</div>
-    </section>
-
-    <!-- IMPOSTOS PARCELADOS (placeholder seguro) -->
-    <section id="tab-impParc" class="card p-4 hidden">
-      <h2 class="font-semibold mb-1">Impostos Parcelados</h2>
-      <div class="text-sm opacity-80">Interface preparada. Integração de API será habilitada na próxima revisão.</div>
-    </section>
-
-    <!-- IMPOSTO DO MÊS (placeholder seguro) -->
-    <section id="tab-impMes" class="card p-4 hidden">
-      <h2 class="font-semibold mb-1">Imposto do Mês</h2>
-      <div class="text-sm opacity-80">Interface preparada. Integração de API será habilitada na próxima revisão.</div>
-    </section>
+    <!-- CONTAS/IMPOSTOS (placeholders visuais por enquanto) -->
+    <section id="tab-contas" class="card p-4 hidden"><h2 class="font-semibold">Contas da Empresa</h2><div class="text-sm opacity-80">Interface preparada.</div></section>
+    <section id="tab-impParc" class="card p-4 hidden"><h2 class="font-semibold">Impostos Parcelados</h2><div class="text-sm opacity-80">Interface preparada.</div></section>
+    <section id="tab-impMes" class="card p-4 hidden"><h2 class="font-semibold">Imposto do Mês</h2><div class="text-sm opacity-80">Interface preparada.</div></section>
 
     <!-- RESUMO -->
     <section id="tab-resumo" class="card p-4 hidden">
@@ -207,6 +223,12 @@
       const s = String(val).split('T')[0];
       return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('/') : s;
     };
+
+    function showError(msg){
+      const bar=document.getElementById('errorBar'); const m=document.getElementById('errorMsg');
+      m.textContent = msg; bar.classList.add('show');
+    }
+    function hideError(){ document.getElementById('errorBar').classList.remove('show'); }
 
     function stripExtras(obs) {
       return String(obs||'')
@@ -239,7 +261,7 @@
       listFunc: ()=>jsonp(API_URL+'?action=listfuncionarios'),
       saveFunc: (p)=>jsonp(API_URL+'?action=savefunc&payload='+encodeURIComponent(JSON.stringify(p))),
       delFunc:  (id)=>jsonp(API_URL+'?action=deletefunc&id='+encodeURIComponent(id)),
-      // Créditos (registro do mês)
+      // Créditos
       listCred: ()=>jsonp(API_URL+'?action=listreg'),
       saveCred: (p)=>jsonp(API_URL+'?action=savereg&payload='+encodeURIComponent(JSON.stringify(p))),
       delCred:  (id)=>jsonp(API_URL+'?action=delreg&id='+encodeURIComponent(id)),
@@ -276,9 +298,9 @@
       if(!/^\d{4}-\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
       api.setMonth(v).then(r=>{
         if(!r||!r.ok){ alert('Falha ao definir mês.'); return; }
-        const info = r.result || r; // tolerância
-        document.getElementById('sumMsg').textContent = 'Resumo atualizado para '+ (info.mesAtualLabel || info.mesAtualYYYYMM || '');
-      });
+        const info = r.result || r;
+        document.getElementById('sumMsg')?.textContent && (document.getElementById('sumMsg').textContent = 'Resumo atualizado para '+ (info.mesAtualLabel || info.mesAtualYYYYMM || ''));
+      }).catch(e=>showError('Definir mês: '+e.message));
     });
 
     // ===== Funcionários
@@ -322,7 +344,7 @@
         if(!r||!r.ok){ alert('Falha ao salvar.'); return; }
         e.target.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00';
         loadFuncionarios();
-      });
+      }).catch(e=>showError('Salvar funcionário: '+e.message));
     });
     document.getElementById('fnClear').addEventListener('click', ()=>{ formFunc.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00'; });
     document.body.addEventListener('click', ev=>{
@@ -336,7 +358,8 @@
       }
       if(t.classList.contains('js-del-f')){
         const id=t.dataset.id; if(!confirm('Excluir funcionário '+id+'?')) return;
-        api.delFunc(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFuncionarios(); });
+        api.delFunc(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFuncionarios(); })
+          .catch(e=>showError('Excluir funcionário: '+e.message));
       }
     });
 
@@ -374,7 +397,7 @@
       api.saveCred(payload).then(r=>{
         if(!r||!r.ok){ alert('Falha ao salvar crédito.'); return; }
         e.target.reset(); crId.value=''; loadCreditos();
-      });
+      }).catch(e=>showError('Salvar crédito: '+e.message));
     });
     document.getElementById('crClear').addEventListener('click', ()=>{ formCred.reset(); crId.value=''; });
     document.body.addEventListener('click', ev=>{
@@ -390,7 +413,8 @@
       }
       if(t.classList.contains('js-del-c')){
         const id=t.dataset.id; if(!confirm('Excluir crédito?')) return;
-        api.delCred(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadCreditos(); });
+        api.delCred(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadCreditos(); })
+          .catch(e=>showError('Excluir crédito: '+e.message));
       }
     });
 
@@ -423,7 +447,8 @@
       e.preventDefault();
       const obs=buildObs(cxRec.value, cxLink.value.trim(), cxObs.value.trim());
       const p={ id:cxId.value||undefined, descricao:cxDesc.value.trim(), categoria:cxCat.value.trim(), vencimento:cxVenc.value, valor:toNumberBR(cxValor.value), status:cxStatus.value, observacoes:obs };
-      api.saveFix(p).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); cxId.value=''; loadFixas(); });
+      api.saveFix(p).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); cxId.value=''; loadFixas(); })
+        .catch(e=>showError('Salvar fixa: '+e.message));
     });
     cxClear.addEventListener('click', ()=>{ formFixa.reset(); cxId.value=''; });
     document.body.addEventListener('click', ev=>{
@@ -437,7 +462,8 @@
       }
       if(t.classList.contains('js-del-x')){
         const id=t.dataset.id; if(!confirm('Excluir conta fixa '+id+'?')) return;
-        api.delFix(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFixas(); });
+        api.delFix(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFixas(); })
+          .catch(e=>showError('Excluir fixa: '+e.message));
       }
     });
 
@@ -464,12 +490,12 @@
     }
 
     // ===== Resumo (planilha)
-    btnResumo.addEventListener('click', ()=>{ api.resumo().then(r=>{ if(!r||!r.ok){ alert('Falha ao atualizar resumo.'); return; } sumMsg.textContent='Resumo atualizado na planilha.'; }); });
+    btnResumo.addEventListener('click', ()=>{ api.resumo().then(r=>{ if(!r||!r.ok){ alert('Falha ao atualizar resumo.'); return; } document.getElementById('sumMsg') && (sumMsg.textContent='Resumo atualizado na planilha.'); }).catch(e=>showError('Resumo: '+e.message)); });
 
     // ===== Loaders
-    function loadFuncionarios(){ api.listFunc().then(r=>{ if(!r||!r.ok){alert('Falha ao listar funcionários');return;} renderFuncionarios(r.result||[]); }); }
-    function loadCreditos(){ api.listCred().then(r=>{ if(!r||!r.ok){alert('Falha ao listar créditos');return;} renderCreditos(r.result||[]); }); }
-    function loadFixas(){ api.listFix().then(r=>{ if(!r||!r.ok){alert('Falha ao listar contas fixas');return;} renderFixas(r.result||[]); }); }
+    function loadFuncionarios(){ api.listFunc().then(r=>{ if(!r||!r.ok){showError('Listar funcionários falhou.');return;} hideError(); renderFuncionarios(r.result||[]); }).catch(e=>showError('Listar funcionários: '+e.message)); }
+    function loadCreditos(){ api.listCred().then(r=>{ if(!r||!r.ok){showError('Listar créditos falhou.');return;} hideError(); renderCreditos(r.result||[]); }).catch(e=>showError('Listar créditos: '+e.message)); }
+    function loadFixas(){ api.listFix().then(r=>{ if(!r||!r.ok){showError('Listar fixas falhou.');return;} hideError(); renderFixas(r.result||[]); }).catch(e=>showError('Listar fixas: '+e.message)); }
 
     // ===== Conectar / carregar tudo
     btnReload.addEventListener('click', e=>{
@@ -478,8 +504,10 @@
 
     function connectAndLoad(){
       setConn('Conectando…');
+      hideError();
       Promise.all([api.ping(), api.config(), api.listFunc(), api.listCred(), api.listFix()])
         .then(all=>{
+          if(!all[0]?.ok){ throw new Error(all[0]?.error || 'Ping falhou'); }
           setConn('Conectado','text-green-300');
           const cfg = all[1]?.result || {};
           if(cfg.mesAtualYYYYMM) mesInput.value = cfg.mesAtualYYYYMM; // yyyy-mm
@@ -487,13 +515,37 @@
           renderCreditos(all[3]?.result||[]);
           renderFixas(all[4]?.result||[]);
         })
-        .catch((err)=>{ console.error(err); setConn('Erro','text-rose-300'); });
+        .catch((err)=>{ console.error(err); setConn('Erro','text-rose-300'); showError(err.message || 'Não foi possível conectar ao WebApp.'); });
     }
 
-    (function init(){
+    // ===== PIN Flow (somente HTML)
+    (function pinInit(){
+      const PIN = (window.GRANTOP_CFG && window.GRANTOP_CFG.UI_PIN) || '';
+      const gate = document.getElementById('pinGate');
+      if (!PIN) { gate.style.display='none'; safeInit(); return; }
+      const ok = localStorage.getItem('grantop_pin_ok') === '1';
+      if (ok) { gate.style.display='none'; safeInit(); return; }
+
+      const btn = document.getElementById('pinBtn');
+      const inp = document.getElementById('pinInput');
+      const err = document.getElementById('pinErr');
+      btn.onclick = () => {
+        if (inp.value === PIN) {
+          localStorage.setItem('grantop_pin_ok','1');
+          gate.style.display='none';
+          safeInit();
+        } else {
+          err.classList.remove('hidden');
+          inp.focus();
+        }
+      };
+    })();
+
+    // Inicia links e conexão (chamado após liberar o PIN)
+    function safeInit(){
       document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
       connectAndLoad();
-    })();
+    }
   </script>
 </body>
 </html>
