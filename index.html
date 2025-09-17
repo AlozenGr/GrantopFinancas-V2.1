@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GRANTOP • Finanças V2</title>
+  <link rel="icon" href="logo-grantop.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CONFIG INLINE (use exatamente estes valores) -->
+  <script>
+    window.GRANTOP_CFG = {
+      API_URL: "https://script.google.com/macros/s/AKfycbwzFAYelcAkfPvmqiMvybOAxwTMpc9T7SZEpkcD32cS7dE5oAA6xNY5m9ZVmGceXvP0vw/exec",
+      TOKEN: "2400",
+      SS_ID: "1mtUI3biJvShHpKs2i3rzd1PEtfxRgVrF4WEQ-3IWmfc"
+    };
+  </script>
+
+  <style>
+    :root { --bg:#0b1220; --panel:#0f172a; --border:#334155; --txt:#e2e8f0; }
+    body { background:var(--bg); color:var(--txt); }
+    .card{ border:1px solid #33415566; border-radius:12px; background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.25) }
+    .btn{ display:inline-flex; align-items:center; gap:.5rem; border:1px solid var(--border); border-radius:8px; padding:.45rem .75rem; background:var(--panel) }
+    .btn:hover{ background:#0b1220 }
+    .tab{ border:1px solid var(--border); border-radius:9999px; padding:.4rem .8rem; background:var(--panel) }
+    .tab.active{ outline:2px solid #60a5fa; }
+    input, select{ background:#0b1220; border:1px solid var(--border); border-radius:8px; padding:.5rem .65rem; width:100% }
+    table { border-collapse: collapse; width:100% }
+    th, td { border:1px solid var(--border); padding:.45rem .5rem; font-size:.9rem }
+    thead { background:#0b1220 }
+    .pill{ border:1px solid var(--border); padding:.2rem .5rem; border-radius:999px; font-size:.75rem }
+    a.link { color:#93c5fd; text-decoration: underline; }
+    header { position: sticky; top: 0; z-index: 40; }
+    nav.sticky-tabs { position: sticky; top: 76px; z-index: 30; background: var(--bg); padding:.5rem 1rem; border-bottom:1px solid #1f2937; }
+    .hint{ font-size:.85rem; color:#9ca3af }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="p-4 md:p-6 bg-[#0f172a] shadow flex items-center justify-between border-b border-slate-700">
+    <div class="flex items-center gap-3">
+      <img src="logo-grantop.png" alt="GRANTOP" class="h-10 w-auto" />
+      <h1 class="text-lg md:text-xl font-bold">GRANTOP • Finanças</h1>
+      <span id="conn" class="text-xs text-slate-300">Conectando…</span>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 text-sm">
+        <label class="opacity-80">Mês vigente</label>
+        <div class="flex items-center gap-1">
+          <input id="mesVigente" type="month" class="border rounded px-2 py-1" />
+          <button id="btnOpenMonth" class="btn" type="button" title="Selecionar mês" aria-label="Selecionar mês">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm13 8H4v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9ZM8 6H6V5H5a1 1 0 0 0-1 1v2h16V6a1 1 0 0 0-1-1h-1v1h-2V5H8v1Z"/></svg>
+          </button>
+        </div>
+        <button id="btnMesSalvar" class="btn" type="button">Aplicar</button>
+        <span id="mesLabel" class="ml-2 opacity-80"></span>
+      </div>
+
+      <button id="btnResumo" class="btn" type="button">Gerar Resumo (planilha)</button>
+      <a id="btnReload" href="#" class="text-sm link">Recarregar</a>
+      <a target="_blank" class="text-sm link" id="linkPlanilha">Abrir planilha</a>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <section class="p-4 pt-2">
+    <div class="grid gap-3 md:grid-cols-4">
+      <div class="card p-3"><div class="text-xs opacity-70">Faturamento (Total)</div><div id="kpiCredTot" class="text-xl font-semibold">R$ 0,00</div></div>
+      <div class="card p-3"><div class="text-xs opacity-70">Folha (Total)</div><div id="kpiFolhaTot" class="text-xl font-semibold">R$ 0,00</div></div>
+      <div class="card p-3"><div class="text-xs opacity-70">Fixas Pendentes</div><div id="kpiFixasPend" class="text-xl font-semibold">R$ 0,00</div></div>
+      <div class="card p-3"><div class="text-xs opacity-70">Saldo Previsto</div><div id="kpiSaldoPrev" class="text-xl font-semibold">R$ 0,00</div></div>
+    </div>
+  </section>
+
+  <!-- ABAS (iguais à planilha) -->
+  <nav class="sticky-tabs flex gap-2">
+    <button class="tab active" data-tab="faturamento" type="button">Faturamento</button>
+    <button class="tab" data-tab="funcionarios" type="button">Funcionarios</button>
+    <button class="tab" data-tab="contasfixas" type="button">Contas Fixas</button>
+    <button class="tab" data-tab="contasempresa" type="button">Contas da Empresa</button>
+    <button class="tab" data-tab="impparc" type="button">Impostos Parcelados</button>
+    <button class="tab" data-tab="impmes" type="button">Imposto do Mês</button>
+    <button class="tab" data-tab="resumo" type="button">Resumo Mensal</button>
+  </nav>
+
+  <main class="p-4 space-y-6">
+    <!-- FATURAMENTO -->
+    <section id="tab-faturamento" class="card p-4">
+      <h2 class="font-semibold mb-3">Faturamento</h2>
+
+      <form id="formFat" class="grid md:grid-cols-6 gap-3 items-end">
+        <div><label class="block text-sm mb-1">Data</label><input id="ftData" type="date" required /></div>
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Cliente</label><input id="ftCliente" required /></div>
+        <div class="md:col-span-3"><label class="block text-sm mb-1">Serviço / Local executado</label><input id="ftServico" required /></div>
+        <div><label class="block text-sm mb-1">Valor (R$)</label><input id="ftValor" inputmode="decimal" required /></div>
+        <div><label class="block text-sm mb-1">NF (opcional)</label><input id="ftNF" /></div>
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Link do boleto (opcional)</label><input id="ftBoleto" placeholder="https://..." /></div>
+        <div><label class="block text-sm mb-1">Venc. do boleto</label><input id="ftVenc" type="date" /></div>
+        <div><label class="block text-sm mb-1">Pago?</label><select id="ftPago"><option>Não</option><option>Sim</option></select></div>
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Observações</label><input id="ftObs" /></div>
+        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ftClear">Limpar</button></div>
+        <input type="hidden" id="ftId" />
+      </form>
+
+      <div class="mt-6 overflow-x-auto">
+        <table>
+          <thead><tr><th>Data</th><th>Cliente</th><th>Serviço/Local</th><th>Valor</th><th>NF</th><th>Venc.</th><th>Pago?</th><th>Obs</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyFat"></tbody>
+        </table>
+        <div id="fatEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem lançamentos.</div>
+      </div>
+    </section>
+
+    <!-- FUNCIONARIOS -->
+    <section id="tab-funcionarios" class="card p-4 hidden">
+      <h2 class="font-semibold mb-3">Funcionarios</h2>
+
+      <form id="formFunc" class="grid md:grid-cols-6 gap-3 items-end">
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Funcionário</label><input id="fnNome" required /></div>
+        <div><label class="block text-sm mb-1">Salário (R$)</label><input id="fnSal" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">% Adicional</label><input id="fnAdic" inputmode="decimal" value="0" /></div>
+        <div><label class="block text-sm mb-1">Diárias (qtd)</label><input id="fnDiaQtd" inputmode="numeric" value="0" /></div>
+        <div><label class="block text-sm mb-1">Valor da diária (R$)</label><input id="fnDiaVal" inputmode="decimal" value="0,00" /></div>
+        <div><label class="block text-sm mb-1">VT (R$)</label><input id="fnVT" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">VR (R$)</label><input id="fnVR" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">Descontos (R$)</label><input id="fnDesc" inputmode="decimal" value="0,00" /></div>
+        <div class="md:col-span-2">
+          <div class="text-sm mb-1">Total (prévia)</div>
+          <div id="fnTotalPrev" class="text-xl font-semibold">R$ 0,00</div>
+          <div class="text-xs opacity-70">Total = Salário + (Salário × %Adic) + (Diárias × Valor) − Descontos + VT + VR</div>
+        </div>
+        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="fnClear">Limpar</button></div>
+        <input type="hidden" id="fnId" />
+      </form>
+
+      <div class="mt-6 overflow-x-auto">
+        <table>
+          <thead><tr><th>ID</th><th>Funcionário</th><th>Salário (ajustado)</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyFunc"></tbody></table>
+        <div id="fnEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem funcionários.</div>
+      </div>
+    </section>
+
+    <!-- CONTAS FIXAS -->
+    <section id="tab-contasfixas" class="card p-4 hidden">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Contas Fixas</h2>
+        <div class="flex gap-2 items-center">
+          <select id="filtroCat" class="pill"><option value="">Categoria: todas</option></select>
+          <select id="filtroStatus" class="pill"><option value="">Status: todos</option><option>Pendente</option><option>Pago</option></select>
+        </div>
+      </div>
+
+      <form id="formFixa" class="grid md:grid-cols-7 gap-3 items-end">
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Descrição</label><input id="cxDesc" required /></div>
+        <div><label class="block text-sm mb-1">Categoria</label><input id="cxCat" /></div>
+        <div><label class="block text-sm mb-1">Vencimento</label><input id="cxVenc" type="date" required /></div>
+        <div><label class="block text-sm mb-1">Valor (R$)</label><input id="cxValor" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">Status</label><select id="cxStatus"><option>Pendente</option><option>Pago</option></select></div>
+        <div><label class="block text-sm mb-1">Recorrente?</label><select id="cxRec"><option>Não</option><option>Sim</option></select></div>
+        <div class="md:col-span-7"><label class="block text-sm mb-1">Link do boleto (opcional)</label><input id="cxLink" /></div>
+        <div class="md:col-span-7"><label class="block text-sm mb-1">Observações</label><input id="cxObs" /></div>
+        <div class="md:col-span-7 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="cxClear">Limpar</button></div>
+        <input type="hidden" id="cxId" />
+      </form>
+
+      <div class="mt-6 overflow-x-auto">
+        <table>
+          <thead><tr><th>ID</th><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyFixas"></tbody>
+        </table>
+        <div id="cxEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem contas fixas.</div>
+      </div>
+    </section>
+
+    <!-- CONTAS DA EMPRESA -->
+    <section id="tab-contasempresa" class="card p-4 hidden">
+      <h2 class="font-semibold mb-3">Contas da Empresa</h2>
+      <div class="hint mb-2">Campos: Banco, Agência/Conta, Tipo, Saldo, Observações.</div>
+
+      <form id="formCE" class="grid md:grid-cols-6 gap-3 items-end">
+        <div><label class="block text-sm mb-1">Banco</label><input id="ceBanco"/></div>
+        <div><label class="block text-sm mb-1">Agência/Conta</label><input id="ceConta"/></div>
+        <div><label class="block text-sm mb-1">Tipo</label><input id="ceTipo" placeholder="Corrente/Poupança"/></div>
+        <div><label class="block text-sm mb-1">Saldo (R$)</label><input id="ceSaldo" inputmode="decimal"/></div>
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Observações</label><input id="ceObs"/></div>
+        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ceClear">Limpar</button></div>
+        <input type="hidden" id="ceId" />
+      </form>
+
+      <div class="mt-6 overflow-x-auto">
+        <table>
+          <thead><tr><th>ID</th><th>Banco</th><th>Conta</th><th>Tipo</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyCE"></tbody>
+        </table>
+        <div id="ceEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem registros.</div>
+      </div>
+    </section>
+
+    <!-- IMPOSTOS PARCELADOS -->
+    <section id="tab-impparc" class="card p-4 hidden">
+      <h2 class="font-semibold mb-3">Impostos Parcelados</h2>
+
+      <form id="formIP" class="grid md:grid-cols-7 gap-3 items-end">
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Descrição</label><input id="ipDesc"/></div>
+        <div><label class="block text-sm mb-1">Tributo</label><input id="ipTrib"/></div>
+        <div><label class="block text-sm mb-1">Parcela</label><input id="ipParc" placeholder="ex.: 3/12"/></div>
+        <div><label class="block text-sm mb-1">Venc.</label><input id="ipVenc" type="date"/></div>
+        <div><label class="block text-sm mb-1">Valor (R$)</label><input id="ipValor" inputmode="decimal"/></div>
+        <div><label class="block text-sm mb-1">Pago</label><select id="ipPago"><option>Não</option><option>Sim</option></select></div>
+        <div class="md:col-span-7"><label class="block text-sm mb-1">Obs</label><input id="ipObs"/></div>
+        <div class="md:col-span-7 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ipClear">Limpar</button></div>
+        <input type="hidden" id="ipId" />
+      </form>
+
+      <div class="mt-6 overflow-x-auto">
+        <table>
+          <thead><tr><th>ID</th><th>Descrição</th><th>Tributo</th><th>Parcela</th><th>Venc.</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyIP"></tbody>
+        </table>
+        <div id="ipEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem registros.</div>
+      </div>
+    </section>
+
+    <!-- IMPOSTO DO MÊS -->
+    <section id="tab-impmes" class="card p-4 hidden">
+      <h2 class="font-semibold mb-3">Imposto do Mês</h2>
+
+      <form id="formIM" class="grid md:grid-cols-6 gap-3 items-end">
+        <div><label class="block text-sm mb-1">Mês/Ano</label><input id="imMes" type="month"/></div>
+        <div><label class="block text-sm mb-1">Tributo</label><input id="imTrib"/></div>
+        <div><label class="block text-sm mb-1">Vencimento</label><input id="imVenc" type="date"/></div>
+        <div><label class="block text-sm mb-1">Valor (R$)</label><input id="imValor" inputmode="decimal"/></div>
+        <div><label class="block text-sm mb-1">Pago</label><select id="imPago"><option>Não</option><option>Sim</option></select></div>
+        <div class="md:col-span-6"><label class="block text-sm mb-1">Obs</label><input id="imObs"/></div>
+        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="imClear">Limpar</button></div>
+        <input type="hidden" id="imId" />
+      </form>
+
+      <div class="mt-6 overflow-x-auto">
+        <table>
+          <thead><tr><th>ID</th><th>Mês/Ano</th><th>Tributo</th><th>Venc.</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyIM"></tbody>
+        </table>
+        <div id="imEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem registros.</div>
+      </div>
+    </section>
+
+    <!-- RESUMO MENSAL -->
+    <section id="tab-resumo" class="card p-4 hidden">
+      <h2 class="font-semibold mb-4">Resumo Mensal</h2>
+      <div class="grid md:grid-cols-3 gap-3">
+        <div class="p-3 rounded-xl border"><div class="text-sm opacity-70 mb-1">Funcionários</div><div>Qtde: <b id="kFuncQtd">0</b></div><div>Total: <b id="kFuncTot">R$ 0,00</b></div></div>
+        <div class="p-3 rounded-xl border"><div class="text-sm opacity-70 mb-1">Fixas</div><div>Pagas: <b id="kFixasPagas">R$ 0,00</b></div><div>Pendentes: <b id="kFixasPend">R$ 0,00</b></div></div>
+        <div class="p-3 rounded-xl border"><div class="text-sm opacity-70 mb-1">Saldo Previsto</div><div><b id="kSaldoPrev">R$ 0,00</b></div></div>
+      </div>
+      <div id="sumMsg" class="text-sm text-slate-300 mt-4">Use “Gerar Resumo (planilha)” para escrever na aba <b>Resumo Mensal</b>.</div>
+    </section>
+  </main>
+
+  <script>
+    // ===== Utils
+    const { API_URL, TOKEN, SS_ID } = window.GRANTOP_CFG || {};
+    const monthNames = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const moneyBR = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const toNumberBR = v => v? Number(String(v).replace(/\./g,'').replace(',','.'))||0 : 0;
+    const fmtDateBR = (val) => { if (!val) return ''; const s = String(val).split('T')[0]; return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('/') : s; };
+    const monthLabel = (yyyyMM)=> (/^\d{4}-\d{2}$/.test(yyyyMM) ? `${monthNames[+yyyyMM.slice(5)-1]} de ${yyyyMM.slice(0,4)}` : '');
+    const stripExtras = (obs)=> String(obs||'').split('|').map(s=>s.trim()).filter(p=>!/^NF:/i.test(p)&&!/^boleto:/i.test(p)&&!/^venc:/i.test(p)).join(' | ');
+
+    function jsonp(url, timeout){
+      timeout = timeout || 15000;
+      return new Promise((resolve, reject)=>{
+        const cb='__cb_'+Math.random().toString(36).slice(2);
+        const s=document.createElement('script'); let done=false;
+        const clear=()=>{ if(done) return; done=true; delete window[cb]; try{s.remove();}catch(e){} };
+        const t=setTimeout(()=>{ clear(); reject(new Error('timeout')); }, timeout);
+        window[cb]=data=>{ clearTimeout(t); clear(); resolve(data); };
+        s.src = url + (url.indexOf('?')>=0?'&':'?') + 'token=' + encodeURIComponent(TOKEN) + '&callback=' + cb + '&_=' + Date.now();
+        s.onerror=()=>{ clearTimeout(t); clear(); reject(new Error('network')); };
+        document.body.appendChild(s);
+      });
+    }
+
+    const api = {
+      ping:     ()=>jsonp(API_URL+'?action=ping'),
+      config:   ()=>jsonp(API_URL+'?action=config'),
+      setMonth: (yyyymm)=>jsonp(API_URL+'?action=setmonth&mes='+encodeURIComponent(yyyymm)),
+      // Funcionários
+      listFunc: ()=>jsonp(API_URL+'?action=listfuncionarios'),
+      saveFunc: (p)=>jsonp(API_URL+'?action=savefunc&payload='+encodeURIComponent(JSON.stringify(p))),
+      delFunc:  (id)=>jsonp(API_URL+'?action=deletefunc&id='+encodeURIComponent(id)),
+      // Faturamento
+      listFat:  ()=>jsonp(API_URL+'?action=listreg'),
+      saveFat:  (p)=>jsonp(API_URL+'?action=savereg&payload='+encodeURIComponent(JSON.stringify(p))),
+      delFat:   (id)=>jsonp(API_URL+'?action=delreg&id='+encodeURIComponent(id)),
+      // Contas Fixas
+      listFix:  ()=>jsonp(API_URL+'?action=listcontasfixas'),
+      saveFix:  (p)=>jsonp(API_URL+'?action=savefixa&payload='+encodeURIComponent(JSON.stringify(p))),
+      delFix:   (id)=>jsonp(API_URL+'?action=deletefixa&id='+encodeURIComponent(id)),
+      // Contas da Empresa
+      listCE:   ()=>jsonp(API_URL+'?action=listcontasempresa'),
+      saveCE:   (p)=>jsonp(API_URL+'?action=savecontaempresa&payload='+encodeURIComponent(JSON.stringify(p))),
+      delCE:    (id)=>jsonp(API_URL+'?action=deletecontaempresa&id='+encodeURIComponent(id)),
+      // Impostos Parcelados
+      listIP:   ()=>jsonp(API_URL+'?action=listimpparc'),
+      saveIP:   (p)=>jsonp(API_URL+'?action=saveimpparc&payload='+encodeURIComponent(JSON.stringify(p))),
+      delIP:    (id)=>jsonp(API_URL+'?action=delimpparc&id='+encodeURIComponent(id)),
+      // Imposto do Mês
+      listIM:   ()=>jsonp(API_URL+'?action=listimpmes'),
+      saveIM:   (p)=>jsonp(API_URL+'?action=saveimpmes&payload='+encodeURIComponent(JSON.stringify(p))),
+      delIM:    (id)=>jsonp(API_URL+'?action=delimpmes&id='+encodeURIComponent(id)),
+      // Resumo
+      resumo:   ()=>jsonp(API_URL+'?action=resumo')
+    };
+
+    // Tabs
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(b=>b.addEventListener('click',()=>{
+      tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
+      const t=b.dataset.tab;
+      ['faturamento','funcionarios','contasfixas','contasempresa','impparc','impmes','resumo'].forEach(id=>{
+        document.getElementById('tab-'+id).classList.toggle('hidden', id!==t);
+      });
+      if(t==='resumo') renderResumoCards();
+    }));
+
+    const connEl = document.getElementById('conn');
+    const setConn = (t,cls)=>{ connEl.textContent=t; connEl.className='text-xs '+(cls||'text-slate-300'); };
+
+    let cacheFunc=[], cacheFixas=[], cacheFixasRaw=[], cacheFat=[], cacheCE=[], cacheIP=[], cacheIM=[];
+    document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
+
+    // Mês
+    const mesInput = document.getElementById('mesVigente');
+    const mesLabelEl = document.getElementById('mesLabel');
+    document.getElementById('btnOpenMonth').addEventListener('click', ()=>{ if (mesInput.showPicker) mesInput.showPicker(); else mesInput.focus(); });
+    const setMonthLabel = v => mesLabelEl.textContent = v ? monthLabel(v) : '';
+    document.getElementById('btnMesSalvar').addEventListener('click', ()=>{
+      const v = mesInput.value; if(!/^\d{4}-\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
+      api.setMonth(v).then(r=>{ if(!r||!r.ok){ alert('Falha ao definir mês.'); return; } setMonthLabel(v); });
+    });
+
+    // Faturamento
+    function extrasToObs(nf,link,venc,obsLivre){ const p=[]; if(nf) p.push('NF:'+nf); if(link) p.push('boleto:'+link); if(venc) p.push('venc:'+venc); if(obsLivre) p.push(obsLivre); return p.join(' | '); }
+    function parseObs(obs){ obs=String(obs||''); const mNF=obs.match(/NF:([^|]+)/i); const mL=obs.match(/boleto:([^|]+)/i); const mV=obs.match(/venc:([\d-]+)/i); return { nf:mNF?mNF[1].trim():'', boleto:mL?mL[1].trim():'', venc:mV?mV[1].trim():'', resto:obs }; }
+    function renderFat(list){
+      cacheFat=list.slice();
+      const tb=document.getElementById('tbodyFat'); tb.innerHTML='';
+      document.getElementById('fatEmpty').classList.toggle('hidden', list.length>0);
+      list.forEach(r=>{
+        const ex=parseObs(r.obs||r.observacoes);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${fmtDateBR(r.data)}</td><td>${r.cliente||'-'}</td><td>${r.servico||r.endereco||'-'}</td>
+          <td>R$ ${moneyBR(r.valor)}</td><td>${ex.nf||''}</td><td>${fmtDateBR(ex.venc)}</td>
+          <td>${r.pago||'-'}</td><td>${stripExtras(ex.resto||'')}</td>
+          <td><button class="btn js-edit-fat" data-id="${r._rowId}" type="button">Editar</button> <button class="btn js-del-fat" data-id="${r._rowId}" type="button">Excluir</button></td>`;
+        tb.appendChild(tr);
+      });
+      renderResumoCards();
+    }
+    document.getElementById('formFat').addEventListener('submit', e=>{
+      e.preventDefault();
+      const obs = extrasToObs(ftNF.value.trim(), ftBoleto.value.trim(), ftVenc.value, ftObs.value.trim());
+      const payload={ id:ftId.value||undefined, data:ftData.value, cliente:ftCliente.value.trim(), servico:ftServico.value.trim(), valor:toNumberBR(ftValor.value), pago:ftPago.value, obs };
+      api.saveFat(payload).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); ftId.value=''; loadFat(); });
+    });
+    document.getElementById('ftClear').addEventListener('click', ()=>{ formFat.reset(); ftId.value=''; });
+    document.body.addEventListener('click', ev=>{
+      const t=ev.target;
+      if(t.classList.contains('js-edit-fat')){
+        const id=t.dataset.id; const it=cacheFat.find(x=>String(x._rowId)===String(id)); if(!it) return;
+        const ex=parseObs(it.obs||it.observacoes);
+        ftId.value=id; ftData.value=/^\d{4}-\d{2}-\d{2}$/.test(it.data)?it.data:''; ftCliente.value=it.cliente||''; ftServico.value=(it.servico||it.endereco||'');
+        ftValor.value=String(it.valor).replace('.',','); ftNF.value=ex.nf||''; ftBoleto.value=ex.boleto||''; ftVenc.value=ex.venc||''; ftPago.value=it.pago||'Não'; ftObs.value=stripExtras(ex.resto||'');
+        window.scrollTo({top:0, behavior:'smooth'});
+      }
+      if(t.classList.contains('js-del-fat')){
+        const id=t.dataset.id; if(!confirm('Excluir lançamento?')) return;
+        api.delFat(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFat(); });
+      }
+    });
+
+    // Funcionários
+    function calcPrev(){
+      const sal=toNumberBR(fnSal.value), ad=toNumberBR(fnAdic.value), dq=Number(fnDiaQtd.value||0), dv=toNumberBR(fnDiaVal.value), vt=toNumberBR(fnVT.value), vr=toNumberBR(fnVR.value), ds=toNumberBR(fnDesc.value);
+      const salAdj = sal + (sal*ad/100) + (dq*dv) - ds, total = salAdj + vt + vr;
+      fnTotalPrev.textContent='R$ '+moneyBR(total); return {salAdj,total};
+    }
+    ;['fnSal','fnAdic','fnDiaQtd','fnDiaVal','fnVT','fnVR','fnDesc'].forEach(id=>document.getElementById(id).addEventListener('input', calcPrev));
+    function renderFuncionarios(list){
+      cacheFunc=list.slice();
+      const tb=tbodyFunc; tb.innerHTML=''; fnEmpty.classList.toggle('hidden', list.length>0);
+      list.forEach(r=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${r.id}</td><td>${r.funcionario||'-'}</td>
+          <td>R$ ${moneyBR(r.salario||r.salarioBase||0)}</td><td>R$ ${moneyBR(r.vt||0)}</td><td>R$ ${moneyBR(r.vr||0)}</td>
+          <td>R$ ${moneyBR(r.total||0)}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
+          <td><button class="btn js-edit-f" data-id="${r.id}" type="button">Editar</button> <button class="btn js-del-f" data-id="${r.id}" type="button">Excluir</button></td>`;
+        tb.appendChild(tr);
+      });
+      renderResumoCards();
+    }
+    formFunc.addEventListener('submit', e=>{
+      e.preventDefault();
+      const k=calcPrev(); const payload={ id:fnId.value||undefined, funcionario:fnNome.value.trim(), salario:k.salAdj, vt:toNumberBR(fnVT.value), vr:toNumberBR(fnVR.value) };
+      api.saveFunc(payload).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); fnId.value=''; fnTotalPrev.textContent='R$ 0,00'; loadFuncionarios(); });
+    });
+    document.getElementById('fnClear').addEventListener('click', ()=>{ formFunc.reset(); fnId.value=''; fnTotalPrev.textContent='R$ 0,00'; });
+    document.body.addEventListener('click', ev=>{
+      const t=ev.target;
+      if(t.classList.contains('js-edit-f')){
+        const id=t.dataset.id; const it=cacheFunc.find(x=>String(x.id)===String(id)); if(!it) return;
+        fnId.value=it.id; fnNome.value=it.funcionario||''; fnSal.value=String(it.salario||it.salarioBase||'').replace('.',','); fnAdic.value='0'; fnDiaQtd.value='0'; fnDiaVal.value='0,00';
+        fnVT.value=String(it.vt||'').replace('.',','); fnVR.value=String(it.vr||'').replace('.',','); fnDesc.value='0,00'; calcPrev(); window.scrollTo({top:0, behavior:'smooth'});
+      }
+      if(t.classList.contains('js-del-f')){
+        const id=t.dataset.id; if(!confirm('Excluir funcionário '+id+'?')) return;
+        api.delFunc(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFuncionarios(); });
+      }
+    });
+
+    // Contas Fixas
+    function parseObsToExtras(obs){ obs=String(obs||''); const rec=/\[REC\]/i.test(obs); const m=obs.match(/(?:link\s*:\s*)(\S+)/i); return {recorrente:rec,link:m?m[1]:''}; }
+    function buildObs(rec,link,livre){ const p=[]; if(rec==='Sim') p.push('[REC]'); if(link) p.push('link: '+link); if(livre) p.push(livre); return p.join(' | '); }
+    function renderFixas(listRaw){
+      cacheFixasRaw=listRaw.slice();
+      const catSel=filtroCat.value, stSel=filtroStatus.value;
+      const list=listRaw.filter(r=>(!catSel||String(r.categoria||'')===catSel)&&(!stSel||String(r.status||'')===stSel));
+      cacheFixas=list.slice();
+      const tb=tbodyFixas; tb.innerHTML=''; cxEmpty.classList.toggle('hidden', list.length>0);
+      list.forEach(r=>{
+        const ex=parseObsToExtras(r.observacoes); const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${r.id}</td><td>${r.descricao||'-'} ${ex.recorrente?'<span class="pill">REC</span>':''}</td>
+          <td>${r.categoria||'-'}</td><td>${fmtDateBR(r.vencimento)}</td><td>R$ ${moneyBR(r.valor)}</td>
+          <td>${r.status}</td><td>${r.observacoes||''} ${ex.link?('— <a target="_blank" rel="noopener noreferrer" href="'+ex.link+'" class="link">boleto</a>'):''}</td>
+          <td>${fmtDateBR(r.atualizadoEm)}</td>
+          <td><button class="btn js-edit-x" data-id="${r.id}" type="button">Editar</button> <button class="btn js-del-x" data-id="${r.id}" type="button">Excluir</button></td>`;
+        tb.appendChild(tr);
+      });
+      const cats={}; listRaw.forEach(r=>{ const c=String(r.categoria||''); if(c) cats[c]=1; });
+      const cur=filtroCat.value; filtroCat.innerHTML='<option value="">Categoria: todas</option>';
+      Object.keys(cats).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; if(c===cur) o.selected=true; filtroCat.appendChild(o); });
+      renderResumoCards();
+    }
+    filtroCat.addEventListener('change', ()=>renderFixas(cacheFixasRaw));
+    filtroStatus.addEventListener('change', ()=>renderFixas(cacheFixasRaw));
+    formFixa.addEventListener('submit', e=>{
+      e.preventDefault();
+      const obs=buildObs(cxRec.value, cxLink.value.trim(), cxObs.value.trim());
+      const p={ id:cxId.value||undefined, descricao:cxDesc.value.trim(), categoria:cxCat.value.trim(), vencimento:cxVenc.value, valor:toNumberBR(cxValor.value), status:cxStatus.value, observacoes:obs };
+      api.saveFix(p).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); cxId.value=''; loadFixas(); });
+    });
+    cxClear.addEventListener('click', ()=>{ formFixa.reset(); cxId.value=''; });
+    document.body.addEventListener('click', ev=>{
+      const t=ev.target;
+      if(t.classList.contains('js-edit-x')){
+        const id=t.dataset.id; const it=cacheFixasRaw.find(x=>String(x.id)===String(id)); if(!it) return;
+        const ex=parseObsToExtras(it.observacoes||'');
+        cxId.value=it.id; cxDesc.value=it.descricao||''; cxCat.value=it.categoria||''; cxVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; cxValor.value=String(it.valor).replace('.',','); cxStatus.value=it.status||'Pendente'; cxRec.value=ex.recorrente?'Sim':'Não'; cxLink.value=ex.link||''; cxObs.value=(String(it.observacoes||'').replace(/\s*\[REC\]\s*/i,'').replace(/\s*link\s*:\s*\S+\s*/i,'')).trim();
+        window.scrollTo({top:0, behavior:'smooth'});
+      }
+      if(t.classList.contains('js-del-x')){
+        const id=t.dataset.id; if(!confirm('Excluir conta fixa '+id+'?')) return;
+        api.delFix(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFixas(); });
+      }
+    });
+
+    // Opcionais – não quebram sem API (mas já estão implementados no Code.gs abaixo)
+    function safeRender(list, tbodyId, emptyId, rowHtmlFn){
+      const tb=document.getElementById(tbodyId); tb.innerHTML='';
+      document.getElementById(emptyId).classList.toggle('hidden', (list||[]).length>0);
+      (list||[]).forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=rowHtmlFn(r); tb.appendChild(tr); });
+    }
+    function loadCE(){ api.listCE().then(r=>{ const rows=r?.result||r||[]; cacheCE=Array.isArray(rows)?rows:[]; safeRender(cacheCE,'tbodyCE','ceEmpty',x=>`<td>${x.id||''}</td><td>${x.banco||''}</td><td>${x.conta||''}</td><td>${x.tipo||''}</td><td>R$ ${moneyBR(x.saldo||0)}</td><td>${x.obs||''}</td><td><button class="btn js-edit-ce" data-id="${x.id||''}" type="button">Editar</button> <button class="btn js-del-ce" data-id="${x.id||''}" type="button">Excluir</button></td>`); }); }
+    function loadIP(){ api.listIP().then(r=>{ const rows=r?.result||r||[]; cacheIP=Array.isArray(rows)?rows:[]; safeRender(cacheIP,'tbodyIP','ipEmpty',x=>`<td>${x.id||''}</td><td>${x.descricao||''}</td><td>${x.tributo||''}</td><td>${x.parcela||''}</td><td>${fmtDateBR(x.vencimento||x.venc||'')}</td><td>R$ ${moneyBR(x.valor||0)}</td><td>${x.pago||''}</td><td>${x.obs||''}</td><td><button class="btn js-edit-ip" data-id="${x.id||''}" type="button">Editar</button> <button class="btn js-del-ip" data-id="${x.id||''}" type="button">Excluir</button></td>`); }); }
+    function loadIM(){ api.listIM().then(r=>{ const rows=r?.result||r||[]; cacheIM=Array.isArray(rows)?rows:[]; safeRender(cacheIM,'tbodyIM','imEmpty',x=>`<td>${x.id||''}</td><td>${x.mes||x.mesAno||''}</td><td>${x.tributo||''}</td><td>${fmtDateBR(x.vencimento||x.venc||'')}</td><td>R$ ${moneyBR(x.valor||0)}</td><td>${x.pago||''}</td><td>${x.obs||''}</td><td><button class="btn js-edit-im" data-id="${x.id||''}" type="button">Editar</button> <button class="btn js-del-im" data-id="${x.id||''}" type="button">Excluir</button></td>`); }); }
+
+    document.body.addEventListener('click', ev=>{
+      const t=ev.target;
+      // CE
+      if(t.classList.contains('js-edit-ce')){ const it=cacheCE.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return; ceId.value=it.id||''; ceBanco.value=it.banco||''; ceConta.value=it.conta||''; ceTipo.value=it.tipo||''; ceSaldo.value=String(it.saldo||'').replace('.',','); ceObs.value=it.obs||''; window.scrollTo({top:0,behavior:'smooth'}); }
+      if(t.classList.contains('js-del-ce')){ if(!confirm('Excluir conta?')) return; api.delCE(t.dataset.id).then(()=>loadCE()); }
+      // IP
+      if(t.classList.contains('js-edit-ip')){ const it=cacheIP.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return; ipId.value=it.id||''; ipDesc.value=it.descricao||''; ipTrib.value=it.tributo||''; ipParc.value=it.parcela||''; ipVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento||'')?(it.vencimento):''; ipValor.value=String(it.valor||'').replace('.',','); ipPago.value=it.pago||'Não'; ipObs.value=it.obs||''; window.scrollTo({top:0,behavior:'smooth'}); }
+      if(t.classList.contains('js-del-ip')){ if(!confirm('Excluir lançamento?')) return; api.delIP(t.dataset.id).then(()=>loadIP()); }
+      // IM
+      if(t.classList.contains('js-edit-im')){ const it=cacheIM.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return; imId.value=it.id||''; imMes.value=it.mes||it.mesAno||''; imTrib.value=it.tributo||''; imVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento||'')?it.vencimento:''; imValor.value=String(it.valor||'').replace('.',','); imPago.value=it.pago||'Não'; imObs.value=it.obs||''; window.scrollTo({top:0,behavior:'smooth'}); }
+      if(t.classList.contains('js-del-im')){ if(!confirm('Excluir imposto do mês?')) return; api.delIM(t.dataset.id).then(()=>loadIM()); }
+    });
+
+    document.getElementById('ceClear')?.addEventListener('click', ()=>{ formCE.reset(); ceId.value=''; });
+    document.getElementById('ipClear')?.addEventListener('click', ()=>{ formIP.reset(); ipId.value=''; });
+    document.getElementById('imClear')?.addEventListener('click', ()=>{ formIM.reset(); imId.value=''; });
+
+    formCE?.addEventListener('submit', e=>{ e.preventDefault(); const p={id:ceId.value||undefined,banco:ceBanco.value,conta:ceConta.value,tipo:ceTipo.value,saldo:toNumberBR(ceSaldo.value),obs:ceObs.value}; api.saveCE(p).then(()=>{ formCE.reset(); ceId.value=''; loadCE(); }); });
+    formIP?.addEventListener('submit', e=>{ e.preventDefault(); const p={id:ipId.value||undefined,descricao:ipDesc.value,tributo:ipTrib.value,parcela:ipParc.value,vencimento:ipVenc.value,valor:toNumberBR(ipValor.value),pago:ipPago.value,obs:ipObs.value}; api.saveIP(p).then(()=>{ formIP.reset(); ipId.value=''; loadIP(); }); });
+    formIM?.addEventListener('submit', e=>{ e.preventDefault(); const p={id:imId.value||undefined,mes:imMes.value,tributo:imTrib.value,vencimento:imVenc.value,valor:toNumberBR(imValor.value),pago:imPago.value,obs:imObs.value}; api.saveIM(p).then(()=>{ formIM.reset(); imId.value=''; loadIM(); }); });
+
+    // Resumo
+    function renderResumoCards(){
+      const totFolha = cacheFunc.reduce((s,x)=>s+Number(x.total||0),0);
+      const totPag   = cacheFixas.reduce((s,x)=>s+(String(x.status)==='Pago'?Number(x.valor||0):0),0);
+      const totPend  = cacheFixas.reduce((s,x)=>s+(String(x.status)!=='Pago'?Number(x.valor||0):0),0);
+      const credTot  = cacheFat.reduce((s,x)=>s+Number(x.valor||0),0);
+      const saldoPrev= credTot - (totFolha + totPend);
+      kFuncQtd.textContent=String(cacheFunc.length);
+      kFuncTot.textContent='R$ '+moneyBR(totFolha);
+      kFixasPagas.textContent='R$ '+moneyBR(totPag);
+      kFixasPend.textContent='R$ '+moneyBR(totPend);
+      kSaldoPrev.textContent='R$ '+moneyBR(saldoPrev);
+      document.getElementById('kpiCredTot').textContent  = 'R$ '+moneyBR(credTot);
+      document.getElementById('kpiFolhaTot').textContent = 'R$ '+moneyBR(totFolha);
+      document.getElementById('kpiFixasPend').textContent= 'R$ '+moneyBR(totPend);
+      document.getElementById('kpiSaldoPrev').textContent= 'R$ '+moneyBR(saldoPrev);
+    }
+
+    btnResumo.addEventListener('click', ()=>{ api.resumo().then(r=>{ if(!r||!r.ok){ alert('Falha ao atualizar resumo.'); return; } document.getElementById('sumMsg')?.textContent && (document.getElementById('sumMsg').textContent='Resumo atualizado na planilha.'); }); });
+
+    document.getElementById('btnReload').addEventListener('click', e=>{ e.preventDefault(); connectAndLoad(); });
+
+    async function connectAndLoad(){
+      setConn('Conectando…');
+      try{
+        const cfgResp = await api.config(); const c = cfgResp?.result || cfgResp || {};
+        if(c?.mesAtualYYYYMM){ mesVigente.value = c.mesAtualYYYYMM; mesLabel.textContent = c.mesAtualLabel || monthLabel(c.mesAtualYYYYMM); }
+        await Promise.all([api.ping(), loadFat(), loadFuncionarios(), loadFixas(), loadCE(), loadIP(), loadIM()]);
+        setConn('Conectado','text-green-300');
+      }catch(e){ console.error(e); setConn('Erro','text-rose-300'); }
+    }
+
+    // load
+    const loadFat = ()=>api.listFat().then(r=>renderFat(Array.isArray(r?.result)?r.result:(Array.isArray(r)?r:[])));
+    const loadFuncionarios = ()=>api.listFunc().then(r=>renderFuncionarios(Array.isArray(r?.result)?r.result:(Array.isArray(r)?r:[])));
+    const loadFixas = ()=>api.listFix().then(r=>renderFixas(Array.isArray(r?.result)?r.result:(Array.isArray(r)?r:[])));
+
+    (function init(){ document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#'; connectAndLoad(); })();
+  </script>
+</body>
+</html>
