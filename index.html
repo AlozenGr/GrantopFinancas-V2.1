@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GRANTOP • Finanças V2</title>
-  <link rel="icon" href="logo-grantop.png" />
+  <link rel="icon" href="Logo.jpg" />
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- CONFIG INLINE (use exatamente estes valores) -->
+  <!-- CONFIG INLINE -->
   <script>
     window.GRANTOP_CFG = {
-      API_URL: "https://script.google.com/macros/s/AKfycbwzFAYelcAkfPvmqiMvybOAxwTMpc9T7SZEpkcD32cS7dE5oAA6xNY5m9ZVmGceXvP0vw/exec",
+      API_URL: "https://script.google.com/macros/s/AKfycbzjSd2ZgYdAe4fRnrTO7TA12d1yZKFrDEfU4s10acjdPsLjQMq6Q9-wty_q5hFYyhX4EA/exec",
       TOKEN: "2400",
-      SS_ID: "1mtUI3biJvShHpKs2i3rzd1PEtfxRgVrF4WEQ-3IWmfc"
+      SS_ID: "1qDYeyVSAlOFfUEMiJhAEYiOzW7PitpKh1eJWd83R8Bs"
     };
   </script>
 
@@ -22,7 +22,7 @@
     .card{ border:1px solid #33415566; border-radius:12px; background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.25) }
     .btn{ display:inline-flex; align-items:center; gap:.5rem; border:1px solid var(--border); border-radius:8px; padding:.45rem .75rem; background:var(--panel) }
     .btn:hover{ background:#0b1220 }
-    .tab{ border:1px solid var(--border); border-radius:9999px; padding:.4rem .8rem; background:var(--panel) }
+    .tab{ border:1px solid var(--border); border-radius:9999px; padding:.4rem .8rem; }
     .tab.active{ outline:2px solid #60a5fa; }
     input, select{ background:#0b1220; border:1px solid var(--border); border-radius:8px; padding:.5rem .65rem; width:100% }
     table { border-collapse: collapse; width:100% }
@@ -30,34 +30,24 @@
     thead { background:#0b1220 }
     .pill{ border:1px solid var(--border); padding:.2rem .5rem; border-radius:999px; font-size:.75rem }
     a.link { color:#93c5fd; text-decoration: underline; }
-    header { position: sticky; top: 0; z-index: 40; }
-    nav.sticky-tabs { position: sticky; top: 76px; z-index: 30; background: var(--bg); padding:.5rem 1rem; border-bottom:1px solid #1f2937; }
-    .hint{ font-size:.85rem; color:#9ca3af }
   </style>
 </head>
 <body>
   <!-- HEADER -->
   <header class="p-4 md:p-6 bg-[#0f172a] shadow flex items-center justify-between border-b border-slate-700">
     <div class="flex items-center gap-3">
-      <img src="logo-grantop.png" alt="GRANTOP" class="h-10 w-auto" />
+      <img src="Logo.jpg" alt="GRANTOP" class="h-12 w-auto" />
       <h1 class="text-lg md:text-xl font-bold">GRANTOP • Finanças</h1>
       <span id="conn" class="text-xs text-slate-300">Conectando…</span>
     </div>
 
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2 text-sm">
-        <label class="opacity-80">Mês vigente</label>
-        <div class="flex items-center gap-1">
-          <input id="mesVigente" type="month" class="border rounded px-2 py-1" />
-          <button id="btnOpenMonth" class="btn" type="button" title="Selecionar mês" aria-label="Selecionar mês">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm13 8H4v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9ZM8 6H6V5H5a1 1 0 0 0-1 1v2h16V6a1 1 0 0 0-1-1h-1v1h-2V5H8v1Z"/></svg>
-          </button>
-        </div>
-        <button id="btnMesSalvar" class="btn" type="button">Aplicar</button>
-        <span id="mesLabel" class="ml-2 opacity-80"></span>
+        <label for="mesVigente" class="opacity-80">Mês vigente</label>
+        <input id="mesVigente" type="month" class="border rounded px-2 py-1" />
+        <button id="btnMesSalvar" class="btn">Aplicar</button>
       </div>
-
-      <button id="btnResumo" class="btn" type="button">Gerar Resumo (planilha)</button>
+      <button id="btnResumo" class="btn">Gerar Resumo (planilha)</button>
       <a id="btnReload" href="#" class="text-sm link">Recarregar</a>
       <a target="_blank" class="text-sm link" id="linkPlanilha">Abrir planilha</a>
     </div>
