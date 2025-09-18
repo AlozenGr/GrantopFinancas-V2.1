@@ -3,746 +3,108 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GRANTOP • Finanças V2</title>
-  <link rel="icon" href="logo.png" />
+  <title>GRANTOP • Finanças</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- CONFIG: ajuste aqui se trocar Web App/Token/Planilha/PIN -->
-  <script>
-    window.GRANTOP_CFG = {
-      API_URL: "https://script.google.com/macros/s/AKfycbwfu7URQhp6q3_20SYbVslk26cWVoWfGuFObZVBm6Fyh_GedzS94fWiLgylD-NM6HDd3Q/exec",
-      TOKEN  : "2400",
-      SS_ID  : "1qDYeyVSAlOFfUEMiJhAEYiOzW7PitpKh1eJWd83R8Bs",
-      UI_PIN : "2400" // PIN simples no HTML
-    };
-  </script>
-
   <style>
-    :root { --bg:#0b1220; --panel:#0f172a; --border:#334155; --txt:#e2e8f0; }
-    body { background:var(--bg); color:var(--txt); }
-    .card{ border:1px solid #33415566; border-radius:12px; background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.25) }
-    .btn{ display:inline-flex; align-items:center; gap:.5rem; border:1px solid var(--border); border-radius:8px; padding:.45rem .75rem; background:var(--panel) }
-    .btn:hover{ background:#0b1220 }
-    .tab{ border:1px solid var(--border); border-radius:9999px; padding:.4rem .8rem; }
-    .tab.active{ outline:2px solid #60a5fa; }
-    input, select{ background:#0b1220; border:1px solid var(--border); border-radius:8px; padding:.5rem .65rem; width:100% }
-    table { border-collapse: collapse; width:100% }
-    th, td { border:1px solid var(--border); padding:.45rem .5rem; font-size:.9rem }
-    thead { background:#0b1220 }
-    .pill{ border:1px solid var(--border); padding:.2rem .5rem; border-radius:999px; font-size:.75rem }
-    a.link { color:#93c5fd; text-decoration: underline; }
-    .badge{ padding:.15rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid transparent }
-    .badge-red{ background:#7f1d1d; border-color:#ef4444; color:#fecaca }
-    .badge-green{ background:#064e3b; border-color:#34d399; color:#d1fae5 }
-    .kcard .big{ font-size:1.1rem; font-weight:700 }
+    body { background-color: #0f172a; color: #f8fafc; }
+    .card { border:1px solid #1e293b; border-radius:14px; background:#1e293b; padding:1rem; }
+    .hidden { display:none; }
   </style>
+  <script>
+    // >>> CONFIG
+    const API_URL = "https://script.google.com/macros/s/AKfycbw3LWYEz3tagGA8IgMfbuXG1KMBsg7t9zNJwxf4bOJoivL-FrdqrUh29zRZsrzR8Mm9wg/exec"; // substitua pela URL /exec da implantação
+    const TOKEN   = "2400";
+
+    async function apiGet(params = {}) {
+      const usp = new URLSearchParams({ token: TOKEN, ...params });
+      const url = `${API_URL}?${usp.toString()}`;
+      const res = await fetch(url, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPost(data = {}) {
+      const fd = new FormData();
+      fd.append("token", TOKEN);
+      for (const [k,v] of Object.entries(data)) fd.append(k, v);
+      const res = await fetch(API_URL, { method:"POST", body: fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function checarConexao() {
+      const alerta = document.getElementById("alertaApi");
+      try {
+        const pong = await apiGet({ action: "ping" });
+        console.log("API OK:", pong);
+        alerta.classList.add("hidden");
+      } catch (e) {
+        console.error("Erro API:", e);
+        alerta.textContent = "Falha ao conectar. Verifique API_URL (/exec), acesso público e TOKEN.";
+        alerta.classList.remove("hidden");
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      checarConexao();
+    });
+  </script>
 </head>
-<body>
-  <!-- PIN GATE -->
-  <div id="pinGate" style="position:fixed;inset:0;background:#0b1220;display:flex;align-items:center;justify-content:center;z-index:50;">
-    <div class="card p-6 w-[92%] max-w-sm text-center">
-      <img src="logo.png" alt="GRANTOP" class="mx-auto mb-4 h-10 opacity-80" />
-      <h3 class="font-semibold mb-2">Acesso restrito</h3>
-      <p class="text-sm opacity-70 mb-4">Informe o PIN para entrar.</p>
-      <input id="pinInput" type="password" placeholder="PIN" class="mb-3" />
-      <div class="text-xs text-rose-300 h-4 mb-2" id="pinErr"></div>
-      <button id="pinOk" class="btn w-full justify-center">Entrar</button>
-    </div>
-  </div>
-
-  <!-- HEADER -->
-  <header class="p-4 md:p-6 bg-[#0f172a] shadow flex items-center justify-between border-b border-slate-700">
-    <div class="flex items-center gap-3">
-      <img src="logo.png" alt="GRANTOP" class="h-8 w-auto" />
-      <h1 class="text-lg md:text-xl font-bold">GRANTOP • Finanças</h1>
-      <span id="conn" class="text-xs text-slate-300">Conectando…</span>
-    </div>
-
-    <div class="flex items-center gap-3">
-      <div class="flex items-center gap-2 text-sm">
-        <label for="mesVigente" class="opacity-80">Mês vigente</label>
-        <input id="mesVigente" type="month" class="border rounded px-2 py-1" />
-        <button id="btnMesSalvar" class="btn">Aplicar</button>
-      </div>
-      <button id="btnResumo" class="btn">Gerar Resumo (planilha)</button>
-      <a id="btnReload" href="#" class="text-sm link">Recarregar</a>
-      <a target="_blank" class="text-sm link" id="linkPlanilha">Abrir planilha</a>
-      <a href="#" id="btnLogout" class="text-sm link">Sair (PIN)</a>
-    </div>
+<body class="p-4">
+  <header class="mb-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold">GRANTOP • Finanças</h1>
+    <button onclick="checarConexao()" class="px-3 py-1 bg-blue-600 rounded">Recarregar</button>
   </header>
 
-  <!-- INDICADORES -->
-  <section class="p-4 grid grid-cols-1 md:grid-cols-6 gap-3">
-    <div class="kcard card p-3 md:col-span-1">
-      <div class="text-sm opacity-70">Créditos (Total)</div>
-      <div class="big" id="kCredTot">R$ 0,00</div>
-    </div>
-    <div class="kcard card p-3 md:col-span-1">
-      <div class="text-sm opacity-70">Folha (Total)</div>
-      <div class="big" id="kFolhaTot">R$ 0,00</div>
-    </div>
-    <div class="kcard card p-3 md:col-span-1">
-      <div class="text-sm opacity-70">Fixas Pendentes</div>
-      <div class="big" id="kFixPend">R$ 0,00</div>
-    </div>
-    <div class="kcard card p-3 md:col-span-1">
-      <div class="text-sm opacity-70">Saldo Previsto</div>
-      <div class="big" id="kSaldoPrevTop">R$ 0,00</div>
-    </div>
-    <div class="kcard card p-3 md:col-span-1">
-      <div class="text-sm opacity-70">Valor a Receber</div>
-      <div class="big" id="kAReceber">R$ 0,00</div>
-    </div>
-    <div class="kcard card p-3 md:col-span-1">
-      <div class="text-sm opacity-70">Valor Recebido</div>
-      <div class="big" id="kRecebido">R$ 0,00</div>
-    </div>
-  </section>
+  <div id="alertaApi" class="hidden text-red-500 font-bold mb-4"></div>
 
-  <!-- NAV -->
-  <nav class="px-4 flex gap-2 flex-wrap">
-    <button class="tab active" data-tab="func">Funcionários</button>
-    <button class="tab" data-tab="creditos">Créditos</button>
-    <button class="tab" data-tab="fixas">Contas Fixas</button>
-    <button class="tab" data-tab="contas">Contas da Empresa</button>
-    <button class="tab" data-tab="impParc">Impostos Parcelados</button>
-    <button class="tab" data-tab="impMes">Imposto do Mês</button>
-    <button class="tab" data-tab="resumo">Resumo</button>
-  </nav>
-
-  <main class="p-4 space-y-6">
-    <!-- ALERTA -->
-    <div id="err" class="hidden card p-3 border border-rose-600 text-rose-300"></div>
-
-    <!-- FUNCIONÁRIOS -->
-    <section id="tab-func" class="card p-4">
-      <h2 class="font-semibold mb-3">Funcionários</h2>
-
-      <form id="formFunc" class="grid md:grid-cols-6 gap-3 items-end">
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Funcionário</label><input id="fnNome" required /></div>
-        <div><label class="block text-sm mb-1">Salário (R$)</label><input id="fnSal" inputmode="decimal" /></div>
-        <div><label class="block text-sm mb-1">% Adicional</label><input id="fnAdic" inputmode="decimal" value="0" /></div>
-        <div><label class="block text-sm mb-1">Diárias (qtd)</label><input id="fnDiaQtd" inputmode="numeric" value="0" /></div>
-        <div><label class="block text-sm mb-1">Valor da diária (R$)</label><input id="fnDiaVal" inputmode="decimal" value="0,00" /></div>
-        <div><label class="block text-sm mb-1">VT (R$)</label><input id="fnVT" inputmode="decimal" /></div>
-        <div><label class="block text-sm mb-1">VR (R$)</label><input id="fnVR" inputmode="decimal" /></div>
-        <div><label class="block text-sm mb-1">Descontos (R$)</label><input id="fnDesc" inputmode="decimal" value="0,00" /></div>
-        <div class="md:col-span-2">
-          <div class="text-sm mb-1">Total (prévia)</div>
-          <div id="fnTotalPrev" class="text-xl font-semibold">R$ 0,00</div>
-          <div class="text-xs opacity-70">Total = Salário + (Salário × %Adic) + (Diárias × Valor) − Descontos + VT + VR</div>
+  <main class="space-y-4">
+    <section class="card">
+      <h2 class="font-semibold mb-2">Funcionários</h2>
+      <form id="formFunc" onsubmit="salvarFuncionario(event)">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <input class="p-2 rounded bg-slate-800" name="funcionario" placeholder="Funcionário" />
+          <input class="p-2 rounded bg-slate-800" name="salario" placeholder="Salário (R$)" type="number" />
+          <input class="p-2 rounded bg-slate-800" name="percAdicional" placeholder="% Adicional" type="number" />
+          <input class="p-2 rounded bg-slate-800" name="diarias" placeholder="Diárias (qtd)" type="number" />
+          <input class="p-2 rounded bg-slate-800" name="valorDiaria" placeholder="Valor da diária (R$)" type="number" />
+          <input class="p-2 rounded bg-slate-800" name="vt" placeholder="VT (R$)" type="number" />
+          <input class="p-2 rounded bg-slate-800" name="vr" placeholder="VR (R$)" type="number" />
+          <input class="p-2 rounded bg-slate-800" name="descontos" placeholder="Descontos (R$)" type="number" />
         </div>
-        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="fnClear">Limpar</button></div>
-        <input type="hidden" id="fnId" />
-      </form>
-
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead><tr><th>ID</th><th>Funcionário</th><th>Salário (ajustado)</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyFunc"></tbody>
-        </table>
-        <div id="fnEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem funcionários.</div>
-      </div>
-    </section>
-
-    <!-- CRÉDITOS -->
-    <section id="tab-creditos" class="card p-4 hidden">
-      <h2 class="font-semibold mb-3">Créditos (Faturamento)</h2>
-
-      <form id="formCred" class="grid md:grid-cols-6 gap-3 items-end">
-        <div><label class="block text-sm mb-1">Data</label><input id="crData" type="date" required /></div>
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Cliente</label><input id="crCliente" required /></div>
-        <div class="md:col-span-3"><label class="block text-sm mb-1">Serviço / Local executado</label><input id="crServico" required /></div>
-        <div><label class="block text-sm mb-1">Valor (R$)</label><input id="crValor" inputmode="decimal" required /></div>
-        <div><label class="block text-sm mb-1">NF (opcional)</label><input id="crNF" /></div>
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Link do boleto (opcional)</label><input id="crBoleto" placeholder="https://..." /></div>
-        <div><label class="block text-sm mb-1">Venc. do boleto</label><input id="crVenc" type="date" /></div>
-        <div><label class="block text-sm mb-1">Pago?</label><select id="crPago"><option>Não</option><option>Sim</option></select></div>
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Observações</label><input id="crObs" /></div>
-        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="crClear">Limpar</button></div>
-        <input type="hidden" id="crId" />
-      </form>
-
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead>
-            <tr><th>Data</th><th>Cliente</th><th>Serviço/Local</th><th>Valor</th><th>NF</th><th>Venc.</th><th>Pago?</th><th>Obs</th><th>Ações</th></tr>
-          </thead>
-          <tbody id="tbodyCred"></tbody>
-        </table>
-        <div id="crEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem créditos lançados.</div>
-      </div>
-    </section>
-
-    <!-- FIXAS -->
-    <section id="tab-fixas" class="card p-4 hidden">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold">Contas Fixas</h2>
-        <div class="flex gap-2 items-center">
-          <select id="filtroCat" class="pill"><option value="">Categoria: todas</option></select>
-          <select id="filtroStatus" class="pill"><option value="">Status: todos</option><option>Pendente</option><option>Pago</option></select>
+        <div class="mt-3 flex gap-2">
+          <button class="px-3 py-1 bg-green-600 rounded" type="submit">Salvar</button>
+          <button class="px-3 py-1 bg-gray-600 rounded" type="reset">Limpar</button>
         </div>
-      </div>
-
-      <form id="formFixa" class="grid md:grid-cols-7 gap-3 items-end">
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Descrição</label><input id="cxDesc" required /></div>
-        <div><label class="block text-sm mb-1">Categoria</label><input id="cxCat" /></div>
-        <div><label class="block text-sm mb-1">Vencimento</label><input id="cxVenc" type="date" required /></div>
-        <div><label class="block text-sm mb-1">Valor (R$)</label><input id="cxValor" inputmode="decimal" /></div>
-        <div><label class="block text-sm mb-1">Status</label><select id="cxStatus"><option>Pendente</option><option>Pago</option></select></div>
-        <div><label class="block text-sm mb-1">Recorrente?</label><select id="cxRec"><option>Não</option><option>Sim</option></select></div>
-        <div class="md:col-span-7"><label class="block text-sm mb-1">Link do boleto (opcional)</label><input id="cxLink" /></div>
-        <div class="md:col-span-7"><label class="block text-sm mb-1">Observações</label><input id="cxObs" /></div>
-        <div class="md:col-span-7 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="cxClear">Limpar</button></div>
-        <input type="hidden" id="cxId" />
       </form>
-
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead><tr><th>ID</th><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyFixas"></tbody>
-        </table>
-        <div id="cxEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem contas fixas.</div>
-      </div>
     </section>
 
-    <!-- CONTAS DA EMPRESA -->
-    <section id="tab-contas" class="card p-4 hidden">
-      <h2 class="font-semibold mb-3">Contas da Empresa</h2>
-      <form id="formContas" class="grid md:grid-cols-6 gap-3 items-end">
-        <div><label class="block text-sm mb-1">Banco</label><input id="ceBanco" /></div>
-        <div><label class="block text-sm mb-1">Tipo</label><input id="ceTipo" placeholder="Corrente / Poupança / CNPJ..." /></div>
-        <div><label class="block text-sm mb-1">Agência</label><input id="ceAg" /></div>
-        <div><label class="block text-sm mb-1">Conta</label><input id="ceConta" /></div>
-        <div class="md:col-span-2"><label class="block text-sm mb-1">PIX (chave)</label><input id="cePix" /></div>
-        <div class="md:col-span-6"><label class="block text-sm mb-1">Obs</label><input id="ceObs" /></div>
-        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ceClear">Limpar</button></div>
-        <input type="hidden" id="ceId" />
-      </form>
-
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead><tr><th>ID</th><th>Banco</th><th>Tipo</th><th>Agência</th><th>Conta</th><th>PIX</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-        <tbody id="tbodyContas"></tbody>
-        </table>
-        <div id="ceEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem contas.</div>
-      </div>
-    </section>
-
-    <!-- IMPOSTOS PARCELADOS -->
-    <section id="tab-impParc" class="card p-4 hidden">
-      <h2 class="font-semibold mb-3">Impostos Parcelados</h2>
-      <form id="formImpParc" class="grid md:grid-cols-7 gap-3 items-end">
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Descrição</label><input id="ipDesc" /></div>
-        <div><label class="block text-sm mb-1">Tributo</label><input id="ipTributo" placeholder="ISS / INSS / FGTS / DARF..." /></div>
-        <div><label class="block text-sm mb-1">Parcela</label><input id="ipParcela" placeholder="3/12" /></div>
-        <div><label class="block text-sm mb-1">Vencimento</label><input id="ipVenc" type="date" /></div>
-        <div><label class="block text-sm mb-1">Valor</label><input id="ipValor" inputmode="decimal" /></div>
-        <div><label class="block text-sm mb-1">Pago</label><select id="ipPago"><option>Não</option><option>Sim</option></select></div>
-        <div class="md:col-span-7"><label class="block text-sm mb-1">Obs</label><input id="ipObs" /></div>
-        <div class="md:col-span-7 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ipClear">Limpar</button></div>
-        <input type="hidden" id="ipId" />
-      </form>
-
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead><tr><th>ID</th><th>Descrição</th><th>Tributo</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyImpParc"></tbody>
-        </table>
-        <div id="ipEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem registros.</div>
-      </div>
-    </section>
-
-    <!-- IMPOSTO DO MÊS -->
-    <section id="tab-impMes" class="card p-4 hidden">
-      <h2 class="font-semibold mb-3">Imposto do Mês</h2>
-      <form id="formImpMes" class="grid md:grid-cols-6 gap-3 items-end">
-        <div><label class="block text-sm mb-1">Mês/Ano</label><input id="imMes" type="month" /></div>
-        <div><label class="block text-sm mb-1">Tributo</label><input id="imTributo" placeholder="ISS / INSS / FGTS / DARF..." /></div>
-        <div><label class="block text-sm mb-1">Vencimento</label><input id="imVenc" type="date" /></div>
-        <div><label class="block text-sm mb-1">Valor</label><input id="imValor" inputmode="decimal" /></div>
-        <div><label class="block text-sm mb-1">Pago</label><select id="imPago"><option>Não</option><option>Sim</option></select></div>
-        <div class="md:col-span-6"><label class="block text-sm mb-1">Obs</label><input id="imObs" /></div>
-        <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="imClear">Limpar</button></div>
-        <input type="hidden" id="imId" />
-      </form>
-
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead><tr><th>Mês/Ano</th><th>Tributo</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyImpMes"></tbody>
-        </table>
-        <div id="imEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem registros.</div>
-      </div>
-    </section>
-
-    <!-- RESUMO -->
-    <section id="tab-resumo" class="card p-4 hidden">
-      <h2 class="font-semibold mb-4">Resumo</h2>
-      <div class="grid md:grid-cols-3 gap-3">
-        <div class="p-3 rounded-xl border"><div class="text-sm opacity-70 mb-1">Funcionários</div><div>Qtde: <b id="kFuncQtd">0</b></div><div>Total: <b id="kFuncTot">R$ 0,00</b></div></div>
-        <div class="p-3 rounded-xl border"><div class="text-sm opacity-70 mb-1">Fixas</div><div>Pagas: <b id="kFixasPagas">R$ 0,00</b></div><div>Pendentes: <b id="kFixasPend">R$ 0,00</b></div></div>
-        <div class="p-3 rounded-xl border"><div class="text-sm opacity-70 mb-1">Saldo Previsto</div><div><b id="kSaldoPrev">R$ 0,00</b></div></div>
-      </div>
-      <div id="sumMsg" class="text-sm text-slate-300 mt-4">Use “Gerar Resumo (planilha)” para escrever na aba <b>Resumo Mensal</b>.</div>
+    <section class="card">
+      <h2 class="font-semibold mb-2">Registros</h2>
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="text-left border-b border-slate-600">
+            <th>ID</th><th>Funcionário</th><th>Salário</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyRegistros"></tbody>
+      </table>
     </section>
   </main>
 
   <script>
-    // ===== Utils
-    const { API_URL, TOKEN, SS_ID } = window.GRANTOP_CFG || {};
-
-    const moneyBR = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-    const toNumberBR = v => v? Number(String(v).replace(/\./g,'').replace(',','.'))||0 : 0;
-
-    const fmtDateBR = (val) => {
-      if (!val) return '';
-      const s = String(val).split('T')[0];
-      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('/') : s;
-    };
-
-    function showError(msg){ const el=err; el.textContent=String(msg||'Erro'); el.classList.remove('hidden'); }
-    function hideError(){ err.classList.add('hidden'); err.textContent=''; }
-
-    function jsonp(url, timeout){
-      timeout = timeout || 15000;
-      return new Promise((resolve, reject)=>{
-        const cb='__cb_'+Math.random().toString(36).slice(2);
-        const s=document.createElement('script'); let done=false;
-        const clear=()=>{ if(done) return; done=true; delete window[cb]; try{s.remove();}catch(e){} };
-        const t=setTimeout(()=>{ clear(); reject(new Error('timeout')); }, timeout);
-        window[cb]=data=>{ clearTimeout(t); clear(); resolve(data); };
-        s.src = url + (url.indexOf('?')>=0?'&':'?') + 'token=' + encodeURIComponent(TOKEN) + '&callback=' + cb + '&_=' + Date.now();
-        s.onerror=()=>{ clearTimeout(t); clear(); reject(new Error('network')); };
-        document.body.appendChild(s);
-      });
-    }
-
-    // ===== API helpers
-    const api = {
-      ping:     ()=>jsonp(API_URL+'?action=ping'),
-      config:   ()=>jsonp(API_URL+'?action=config'),
-      setMonth: (yyyymm)=>jsonp(API_URL+'?action=setmonth&mes='+encodeURIComponent(yyyymm)),
-
-      // funcs
-      listFunc: ()=>jsonp(API_URL+'?action=listfuncionarios'),
-      saveFunc: (p)=>jsonp(API_URL+'?action=savefunc&payload='+encodeURIComponent(JSON.stringify(p))),
-      delFunc:  (id)=>jsonp(API_URL+'?action=deletefunc&id='+encodeURIComponent(id)),
-
-      // creditos
-      listCred: ()=>jsonp(API_URL+'?action=listreg'),
-      saveCred: (p)=>jsonp(API_URL+'?action=savereg&payload='+encodeURIComponent(JSON.stringify(p))),
-      delCred:  (id)=>jsonp(API_URL+'?action=delreg&id='+encodeURIComponent(id)),
-
-      // fixas
-      listFix:  ()=>jsonp(API_URL+'?action=listcontasfixas'),
-      saveFix:  (p)=>jsonp(API_URL+'?action=savefixa&payload='+encodeURIComponent(JSON.stringify(p))),
-      delFix:   (id)=>jsonp(API_URL+'?action=deletefixa&id='+encodeURIComponent(id)),
-
-      // Contas da empresa
-      listContas: ()=>jsonp(API_URL+'?action=listcontasempresa'),
-      saveConta:  (p)=>jsonp(API_URL+'?action=savecontaempresa&payload='+encodeURIComponent(JSON.stringify(p))),
-      delConta:   (id)=>jsonp(API_URL+'?action=delcontaempresa&id='+encodeURIComponent(id)),
-
-      // Impostos parcelados
-      listImpParc: ()=>jsonp(API_URL+'?action=listimpparc'),
-      saveImpParc: (p)=>jsonp(API_URL+'?action=saveimpparc&payload='+encodeURIComponent(JSON.stringify(p))),
-      delImpParc:  (id)=>jsonp(API_URL+'?action=delimpparc&id='+encodeURIComponent(id)),
-
-      // Imposto do mês
-      listImpMes: ()=>jsonp(API_URL+'?action=listimpmes'),
-      saveImpMes: (p)=>jsonp(API_URL+'?action=saveimpmes&payload='+encodeURIComponent(JSON.stringify(p))),
-      delImpMes:  (id)=>jsonp(API_URL+'?action=delimpmes&id='+encodeURIComponent(id)),
-
-      // resumo
-      resumo:   ()=>jsonp(API_URL+'?action=resumo')
-    };
-
-    // ===== Estado/UI
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(b=>b.addEventListener('click',()=>{
-      tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
-      const t=b.dataset.tab;
-      ['func','creditos','fixas','contas','impParc','impMes','resumo'].forEach(id=>{
-        document.getElementById('tab-'+id).classList.toggle('hidden', id!==t);
-      });
-      if(t==='resumo') renderResumoCards();
-    }));
-
-    const connEl = document.getElementById('conn');
-    const setConn = (t,cls)=>{ connEl.textContent=t; connEl.className='text-xs '+(cls||'text-slate-300'); };
-
-    let cacheFunc=[], cacheFixas=[], cacheFixasRaw=[], cacheCred=[];
-    let cacheContas=[], cacheImpParc=[], cacheImpMes=[];
-    document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
-
-    // ===== MÊS VIGENTE
-    const mesInput = document.getElementById('mesVigente');
-    document.getElementById('btnMesSalvar').addEventListener('click', ()=>{
-      const v = mesInput.value; // yyyy-mm
-      if(!/^\d{4}-\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
-      api.setMonth(v).then(r=>{
-        if(!r||!r.ok){ alert('Falha ao definir mês.'); return; }
-        const info = r.result || r; // tolerância
-        document.getElementById('sumMsg').textContent = 'Resumo atualizado para '+ (info.mesAtualLabel || '');
-      });
-    });
-
-    // ===== Funcionários
-    function calcPrev(){
-      const sal=toNumberBR(document.getElementById('fnSal').value);
-      const ad =toNumberBR(document.getElementById('fnAdic').value);
-      const dq =Number(document.getElementById('fnDiaQtd').value||0);
-      const dv =toNumberBR(document.getElementById('fnDiaVal').value);
-      const vt =toNumberBR(document.getElementById('fnVT').value);
-      const vr =toNumberBR(document.getElementById('fnVR').value);
-      const ds =toNumberBR(document.getElementById('fnDesc').value);
-      const salAdj = sal + (sal*ad/100) + (dq*dv) - ds;
-      const total = salAdj + vt + vr;
-      document.getElementById('fnTotalPrev').textContent = 'R$ '+moneyBR(total);
-      return {salAdj,total};
-    }
-    ['fnSal','fnAdic','fnDiaQtd','fnDiaVal','fnVT','fnVR','fnDesc'].forEach(id=>{
-      document.getElementById(id).addEventListener('input', calcPrev);
-    });
-
-    function renderFuncionarios(list){
-      cacheFunc=list.slice();
-      const tb=document.getElementById('tbodyFunc'); tb.innerHTML='';
-      document.getElementById('fnEmpty').classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${r.id}</td><td>${r.funcionario||'-'}</td>
-          <td>R$ ${moneyBR(r.salario||r.salarioBase||0)}</td><td>R$ ${moneyBR(r.vt||0)}</td><td>R$ ${moneyBR(r.vr||0)}</td>
-          <td>R$ ${moneyBR(r.total||0)}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-f" data-id="${r.id}">Editar</button> <button class="btn js-del-f" data-id="${r.id}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-      renderResumoCards();
-      recalcTopCards();
-    }
-
-    document.getElementById('formFunc').addEventListener('submit', e=>{
-      e.preventDefault();
-      const k = calcPrev();
-      const payload={ id:fnId.value||undefined, funcionario:fnNome.value.trim(), salario:k.salAdj, vt:toNumberBR(fnVT.value), vr:toNumberBR(fnVR.value) };
-      api.saveFunc(payload).then(r=>{
-        if(!r||!r.ok){ alert('Falha ao salvar.'); return; }
-        e.target.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00';
-        loadFuncionarios();
-      }).catch(ex=>showError(ex.message));
-    });
-    document.getElementById('fnClear').addEventListener('click', ()=>{ formFunc.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00'; });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-f')){
-        const id=t.dataset.id;
-        const it=cacheFunc.find(x=>String(x.id)===String(id)); if(!it) return;
-        fnId.value=it.id; fnNome.value=it.funcionario||''; fnSal.value=String(it.salario||it.salarioBase||'').replace('.',','); fnAdic.value='0'; fnDiaQtd.value='0'; fnDiaVal.value='0,00';
-        fnVT.value=String(it.vt||'').replace('.',','); fnVR.value=String(it.vr||'').replace('.',','); fnDesc.value='0,00'; calcPrev();
-        window.scrollTo({top:0, behavior:'smooth'});
+    async function salvarFuncionario(ev) {
+      ev.preventDefault();
+      const fd = new FormData(ev.target);
+      const data = Object.fromEntries(fd.entries());
+      data.action = "add";
+      try {
+        const res = await apiPost(data);
+        console.log("Salvo:", res);
+        alert("Registro salvo com sucesso!");
+      } catch (e) {
+        alert("Erro ao salvar: " + e.message);
       }
-      if(t.classList.contains('js-del-f')){
-        const id=t.dataset.id; if(!confirm('Excluir funcionário '+id+'?')) return;
-        api.delFunc(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFuncionarios(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Créditos
-    function extrasToObs(nf,link,venc,obsLivre){
-      const p=[]; if(nf) p.push('NF:'+nf); if(link) p.push('boleto:'+link); if(venc) p.push('venc:'+venc); if(obsLivre) p.push(obsLivre);
-      return p.join(' | ');
-    }
-    function parseObs(obs){
-      obs=String(obs||'');
-      const mNF=obs.match(/NF:([^|]+)/i);
-      const mL =obs.match(/boleto:([^|]+)/i);
-      const mV =obs.match(/venc:([\d-]+)/i);
-      return { nf:mNF?mNF[1].trim():'', boleto:mL?mL[1].trim():'', venc:mV?mV[1].trim():'', resto:obs };
-    }
-    function badgePago(val){
-      const s = String(val||'').trim().toLowerCase();
-      if(s==='sim') return '<span class="badge badge-green">Sim</span>';
-      return '<span class="badge badge-red">Não</span>';
-    }
-    function renderCreditos(list){
-      cacheCred=list.slice();
-      const tb=document.getElementById('tbodyCred'); tb.innerHTML='';
-      document.getElementById('crEmpty').classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const ex=parseObs(r.obs||r.observacoes);
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${fmtDateBR(r.data)}</td><td>${r.cliente||'-'}</td><td>${r.servico||r.endereco||'-'}</td>
-          <td>R$ ${moneyBR(r.valor)}</td><td>${ex.nf||''}</td><td>${fmtDateBR(ex.venc)}</td>
-          <td>${badgePago(r.pago)}</td><td>${String(ex.resto||'').replace(/(?:NF:[^|]+|boleto:[^|]+|venc:[^|]+)\s*\|?\s*/gi,'').trim()}</td>
-          <td><button class="btn js-edit-c" data-id="${r._rowId}">Editar</button> <button class="btn js-del-c" data-id="${r._rowId}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-      renderResumoCards();
-      recalcTopCards();
-    }
-    document.getElementById('formCred').addEventListener('submit', e=>{
-      e.preventDefault();
-      const obs = extrasToObs(crNF.value.trim(), crBoleto.value.trim(), crVenc.value, crObs.value.trim());
-      const payload={ id:crId.value||undefined, data:crData.value, cliente:crCliente.value.trim(), servico:crServico.value.trim(), valor:toNumberBR(crValor.value), pago:crPago.value, obs };
-      api.saveCred(payload).then(r=>{
-        if(!r||!r.ok){ alert('Falha ao salvar crédito.'); return; }
-        e.target.reset(); crId.value=''; loadCreditos();
-      }).catch(ex=>showError(ex.message));
-    });
-    document.getElementById('crClear').addEventListener('click', ()=>{ formCred.reset(); crId.value=''; });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-c')){
-        const id=t.dataset.id;
-        const it=cacheCred.find(x=>String(x._rowId)===String(id)); if(!it) return;
-        const ex=parseObs(it.obs||it.observacoes);
-        crId.value=id; crData.value=/^\d{4}-\d{2}-\d{2}$/.test(it.data)?it.data:''; crCliente.value=it.cliente||''; crServico.value=(it.servico||it.endereco||'');
-        crValor.value=String(it.valor).replace('.',','); crNF.value=ex.nf||''; crBoleto.value=ex.boleto||''; crVenc.value=ex.venc||''; crPago.value=(it.pago||'Não');
-        crObs.value=(String(ex.resto||'').replace(/(?:NF:[^|]+|boleto:[^|]+|venc:[^|]+)\s*\|?\s*/gi,'').trim());
-        window.scrollTo({top:0, behavior:'smooth'});
-      }
-      if(t.classList.contains('js-del-c')){
-        const id=t.dataset.id; if(!confirm('Excluir crédito?')) return;
-        api.delCred(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadCreditos(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Fixas
-    function parseObsToExtras(obs){ obs=String(obs||''); const rec=/\[REC\]/i.test(obs); const m=obs.match(/(?:link\s*:\s*)(\S+)/i); return {recorrente:rec,link:m?m[1]:''}; }
-    function buildObs(rec,link,livre){ const p=[]; if(rec==='Sim') p.push('[REC]'); if(link) p.push('link: '+link); if(livre) p.push(livre); return p.join(' | '); }
-    function renderFixas(listRaw){
-      cacheFixasRaw=listRaw.slice();
-      const catSel=filtroCat.value, stSel=filtroStatus.value;
-      const list=listRaw.filter(r=>(!catSel||String(r.categoria||'')===catSel)&&(!stSel||String(r.status||'')===stSel));
-      cacheFixas=list.slice();
-      const tb=tbodyFixas; tb.innerHTML=''; cxEmpty.classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const ex=parseObsToExtras(r.observacoes); const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${r.id}</td><td>${r.descricao||'-'} ${ex.recorrente?'<span class="pill">REC</span>':''}</td>
-          <td>${r.categoria||'-'}</td><td>${fmtDateBR(r.vencimento)}</td><td>R$ ${moneyBR(r.valor)}</td>
-          <td>${r.status}</td><td>${r.observacoes||''} ${ex.link?('— <a target="_blank" rel="noopener noreferrer" href="'+ex.link+'" class="link">boleto</a>'):''}</td>
-          <td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-x" data-id="${r.id}">Editar</button> <button class="btn js-del-x" data-id="${r.id}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-      const cats={}; listRaw.forEach(r=>{ const c=String(r.categoria||''); if(c) cats[c]=1; });
-      const cur=filtroCat.value; filtroCat.innerHTML='<option value="">Categoria: todas</option>';
-      Object.keys(cats).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; if(c===cur) o.selected=true; filtroCat.appendChild(o); });
-      renderResumoCards();
-      recalcTopCards();
-    }
-    filtroCat.addEventListener('change', ()=>renderFixas(cacheFixasRaw));
-    filtroStatus.addEventListener('change', ()=>renderFixas(cacheFixasRaw));
-    formFixa.addEventListener('submit', e=>{
-      e.preventDefault();
-      const obs=buildObs(cxRec.value, cxLink.value.trim(), cxObs.value.trim());
-      const p={ id:cxId.value||undefined, descricao:cxDesc.value.trim(), categoria:cxCat.value.trim(), vencimento:cxVenc.value, valor:toNumberBR(cxValor.value), status:cxStatus.value, observacoes:obs };
-      api.saveFix(p).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); cxId.value=''; loadFixas(); }).catch(ex=>showError(ex.message));
-    });
-    cxClear.addEventListener('click', ()=>{ formFixa.reset(); cxId.value=''; });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-x')){
-        const id=t.dataset.id;
-        const it=cacheFixasRaw.find(x=>String(x.id)===String(id)); if(!it) return;
-        const ex=parseObsToExtras(it.observacoes||'');
-        cxId.value=it.id; cxDesc.value=it.descricao||''; cxCat.value=it.categoria||''; cxVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; cxValor.value=String(it.valor).replace('.',','); cxStatus.value=it.status||'Pendente'; cxRec.value=ex.recorrente?'Sim':'Não'; cxLink.value=ex.link||''; cxObs.value=(String(it.observacoes||'').replace(/\s*\[REC\]\s*/i,'').replace(/\s*link\s*:\s*\S+\s*/i,'')).trim();
-        window.scrollTo({top:0, behavior:'smooth'});
-      }
-      if(t.classList.contains('js-del-x')){
-        const id=t.dataset.id; if(!confirm('Excluir conta fixa '+id+'?')) return;
-        api.delFix(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadFixas(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Contas da Empresa
-    function renderContas(list){
-      cacheContas=list.slice();
-      const tb=tbodyContas; tb.innerHTML='';
-      ceEmpty.classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${r.id}</td><td>${r.banco||''}</td><td>${r.tipo||''}</td><td>${r.agencia||''}</td><td>${r.conta||''}</td>
-          <td>${r.pix||''}</td><td>${r.obs||''}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-ce" data-id="${r.id}">Editar</button> <button class="btn js-del-ce" data-id="${r.id}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-    }
-    formContas.addEventListener('submit', e=>{
-      e.preventDefault();
-      const p={ id:ceId.value||undefined, banco:ceBanco.value.trim(), tipo:ceTipo.value.trim(), agencia:ceAg.value.trim(), conta:ceConta.value.trim(), pix:cePix.value.trim(), obs:ceObs.value.trim() };
-      api.saveConta(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); ceId.value=''; loadContas(); }).catch(ex=>showError(ex.message));
-    });
-    ceClear.addEventListener('click', ()=>{ formContas.reset(); ceId.value=''; });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-ce')){
-        const it=cacheContas.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return;
-        ceId.value=it.id; ceBanco.value=it.banco||''; ceTipo.value=it.tipo||''; ceAg.value=it.agencia||''; ceConta.value=it.conta||''; cePix.value=it.pix||''; ceObs.value=it.obs||'';
-        window.scrollTo({top:0, behavior:'smooth'});
-      }
-      if(t.classList.contains('js-del-ce')){
-        if(!confirm('Excluir conta?')) return;
-        api.delConta(t.dataset.id).then(r=>{ if(!r||!r.ok){alert('Falha ao excluir.');return;} loadContas(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Impostos Parcelados
-    function renderImpParc(list){
-      cacheImpParc=list.slice();
-      const tb=tbodyImpParc; tb.innerHTML='';
-      ipEmpty.classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${r.id}</td><td>${r.descricao||''}</td><td>${r.tributo||''}</td><td>${r.parcela||''}</td>
-          <td>${fmtDateBR(r.vencimento)}</td><td>R$ ${moneyBR(r.valor)}</td><td>${r.pago||''}</td><td>${r.obs||''}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-ip" data-id="${r.id}">Editar</button> <button class="btn js-del-ip" data-id="${r.id}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-    }
-    formImpParc.addEventListener('submit', e=>{
-      e.preventDefault();
-      const p={ id:ipId.value||undefined, descricao:ipDesc.value.trim(), tributo:ipTributo.value.trim(), parcela:ipParcela.value.trim(), vencimento:ipVenc.value, valor:toNumberBR(ipValor.value), pago:ipPago.value, obs:ipObs.value.trim() };
-      api.saveImpParc(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); ipId.value=''; loadImpParc(); }).catch(ex=>showError(ex.message));
-    });
-    ipClear.addEventListener('click', ()=>{ formImpParc.reset(); ipId.value=''; });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-ip')){
-        const it=cacheImpParc.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return;
-        ipId.value=it.id; ipDesc.value=it.descricao||''; ipTributo.value=it.tributo||''; ipParcela.value=it.parcela||'';
-        ipVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; ipValor.value=String(it.valor).replace('.',','); ipPago.value=it.pago||'Não'; ipObs.value=it.obs||'';
-        window.scrollTo({top:0, behavior:'smooth'});
-      }
-      if(t.classList.contains('js-del-ip')){
-        if(!confirm('Excluir imposto parcelado?')) return;
-        api.delImpParc(t.dataset.id).then(r=>{ if(!r||!r.ok){alert('Falha ao excluir.');return;} loadImpParc(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Imposto do Mês
-    function renderImpMes(list){
-      cacheImpMes=list.slice();
-      const tb=tbodyImpMes; tb.innerHTML='';
-      imEmpty.classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${r.mesAno||''}</td><td>${r.tributo||''}</td><td>${fmtDateBR(r.vencimento)}</td>
-          <td>R$ ${moneyBR(r.valor)}</td><td>${r.pago||''}</td><td>${r.obs||''}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-im" data-id="${r._rowId}">Editar</button> <button class="btn js-del-im" data-id="${r._rowId}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-    }
-    formImpMes.addEventListener('submit', e=>{
-      e.preventDefault();
-      const p={ id:imId.value||undefined, mesAno:imMes.value, tributo:imTributo.value.trim(), vencimento:imVenc.value, valor:toNumberBR(imValor.value), pago:imPago.value, obs:imObs.value.trim() };
-      api.saveImpMes(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); imId.value=''; loadImpMes(); }).catch(ex=>showError(ex.message));
-    });
-    imClear.addEventListener('click', ()=>{ formImpMes.reset(); imId.value=''; });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-im')){
-        const it=cacheImpMes.find(x=>String(x._rowId)===String(t.dataset.id)); if(!it) return;
-        imId.value=it._rowId; imMes.value=(it.mesAno||''); imTributo.value=it.tributo||''; imVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; imValor.value=String(it.valor).replace('.',','); imPago.value=it.pago||'Não'; imObs.value=it.obs||'';
-        window.scrollTo({top:0, behavior:'smooth'});
-      }
-      if(t.classList.contains('js-del-im')){
-        if(!confirm('Excluir imposto do mês?')) return;
-        api.delImpMes(t.dataset.id).then(r=>{ if(!r||!r.ok){alert('Falha ao excluir.');return;} loadImpMes(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Resumo (cards da aba)
-    function renderResumoCards(){
-      const totF = cacheFunc.reduce((s,x)=>s+Number(x.total||0),0);
-      const totPag = cacheFixas.reduce((s,x)=>s+(String(x.status)==='Pago'?Number(x.valor||0):0),0);
-      const totPend= cacheFixas.reduce((s,x)=>s+(String(x.status)!=='Pago'?Number(x.valor||0):0),0);
-      const credTot = cacheCred.reduce((s,x)=>s+Number(x.valor||0),0);
-      const saldoPrev = credTot - (totF + totPend);
-      kFuncQtd.textContent=String(cacheFunc.length);
-      kFuncTot.textContent='R$ '+moneyBR(totF);
-      kFixasPagas.textContent='R$ '+moneyBR(totPag);
-      kFixasPend.textContent='R$ '+moneyBR(totPend);
-      kSaldoPrev.textContent='R$ '+moneyBR(saldoPrev);
-    }
-
-    // ===== Indicadores do topo
-    function recalcTopCards(){
-      const totF = cacheFunc.reduce((s,x)=>s+Number(x.total||0),0);
-      const fixPend = cacheFixas.reduce((s,x)=>s+(String(x.status)!=='Pago'?Number(x.valor||0):0),0);
-      const credTot = cacheCred.reduce((s,x)=>s+Number(x.valor||0),0);
-      const aReceber = cacheCred.reduce((s,x)=>s+(String(x.pago||'Não')==='Sim'?0:Number(x.valor||0)),0);
-      const recebido = cacheCred.reduce((s,x)=>s+(String(x.pago||'Não')==='Sim'?Number(x.valor||0):0),0);
-      const saldoPrev = credTot - (totF + fixPend);
-
-      kCredTot.textContent = 'R$ '+moneyBR(credTot);
-      kFolhaTot.textContent = 'R$ '+moneyBR(totF);
-      kFixPend.textContent  = 'R$ '+moneyBR(fixPend);
-      kSaldoPrevTop.textContent = 'R$ '+moneyBR(saldoPrev);
-      kAReceber.textContent = 'R$ '+moneyBR(aReceber);
-      kRecebido.textContent = 'R$ '+moneyBR(recebido);
-    }
-
-    // ===== Resumo (planilha)
-    btnResumo.addEventListener('click', ()=>{ api.resumo().then(r=>{ if(!r||!r.ok){ alert('Falha ao atualizar resumo.'); return; } sumMsg.textContent='Resumo atualizado na planilha.'; }); });
-
-    // ===== Conectar / carregar tudo
-    btnReload.addEventListener('click', e=>{
-      e.preventDefault(); connectAndLoad();
-    });
-
-    function loadFuncionarios(){ api.listFunc().then(r=>{ if(!r||!r.ok){showError('Listar funcionários falhou.');return;} hideError(); renderFuncionarios(r.result||[]); }).catch(e=>showError(e.message)); }
-    function loadCreditos(){ api.listCred().then(r=>{ if(!r||!r.ok){showError('Listar créditos falhou.');return;} hideError(); renderCreditos(r.result||[]); }).catch(e=>showError(e.message)); }
-    function loadFixas(){ api.listFix().then(r=>{ if(!r||!r.ok){showError('Listar fixas falhou.');return;} hideError(); renderFixas(r.result||[]); }).catch(e=>showError(e.message)); }
-    function loadContas(){ api.listContas().then(r=>{ if(!r||!r.ok){showError('Listar contas falhou.');return;} hideError(); renderContas(r.result||[]); }).catch(e=>showError(e.message)); }
-    function loadImpParc(){ api.listImpParc().then(r=>{ if(!r||!r.ok){showError('Listar impostos parcelados falhou.');return;} hideError(); renderImpParc(r.result||[]); }).catch(e=>showError(e.message)); }
-    function loadImpMes(){ api.listImpMes().then(r=>{ if(!r||!r.ok){showError('Listar imposto do mês falhou.');return;} hideError(); renderImpMes(r.result||[]); }).catch(e=>showError(e.message)); }
-
-    function connectAndLoad(){
-      setConn('Conectando…');
-      Promise.all([api.ping(), api.config(), api.listFunc(), api.listCred(), api.listFix(), api.listContas(), api.listImpParc(), api.listImpMes()])
-        .then(all=>{
-          setConn('Conectado','text-green-300');
-          const cfg = all[1]?.result || {};
-          if(cfg.mesAtualYYYYMM) mesInput.value = cfg.mesAtualYYYYMM; // yyyy-mm
-          renderFuncionarios(all[2]?.result||[]);
-          renderCreditos(all[3]?.result||[]);
-          renderFixas(all[4]?.result||[]);
-          renderContas(all[5]?.result||[]);
-          renderImpParc(all[6]?.result||[]);
-          renderImpMes(all[7]?.result||[]);
-          recalcTopCards();
-        })
-        .catch((err)=>{ console.error(err); setConn('Erro','text-rose-300'); showError('Falha ao conectar.'); });
-    }
-
-    // ===== PIN simples (HTML)
-    (function pinInit(){
-      const wantPIN = (window.GRANTOP_CFG && window.GRANTOP_CFG.UI_PIN);
-      if(!wantPIN){ document.getElementById('pinGate').style.display='none'; safeInit(); return; }
-      if(localStorage.getItem('grantop_pin_ok')==='1'){ document.getElementById('pinGate').style.display='none'; safeInit(); return; }
-
-      const gate=document.getElementById('pinGate');
-      const input=document.getElementById('pinInput');
-      const btn=document.getElementById('pinOk');
-      const errEl=document.getElementById('pinErr');
-      function tryOpen(){
-        const ok = String(input.value||'')===String(window.GRANTOP_CFG.UI_PIN);
-        if(ok){ localStorage.setItem('grantop_pin_ok','1'); gate.style.display='none'; safeInit(); }
-        else{ errEl.textContent='PIN incorreto'; input.focus(); input.select(); }
-      }
-      btn.addEventListener('click', tryOpen);
-      input.addEventListener('keydown', e=>{ if(e.key==='Enter') tryOpen(); });
-
-      // Sair (limpar PIN)
-      document.getElementById('btnLogout').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('grantop_pin_ok'); location.reload(); });
-      const u=new URL(location.href); if(u.searchParams.get('logout')==='1'){ localStorage.removeItem('grantop_pin_ok'); u.searchParams.delete('logout'); location.replace(u.toString()); }
-    })();
-
-    function safeInit(){
-      document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
-      connectAndLoad();
     }
   </script>
 </body>
