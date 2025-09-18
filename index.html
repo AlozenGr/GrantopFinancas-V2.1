@@ -1,25 +1,19 @@
-# Generate updated full index.html and sidebar.html and zip them for the user
-import os, zipfile, textwrap, json
-
-base = "/mnt/data/Grantop_Financas_V2.1_fix2"
-os.makedirs(base, exist_ok=True)
-
-index_html = r"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GRANTOP • Finanças V2.1</title>
+  <title>GRANTOP • Finanças V2</title>
   <link rel="icon" href="logo.png" />
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- CONFIG: preencha API_URL (Web App), TOKEN e SS_ID -->
+  <!-- CONFIG: ajuste aqui se trocar Web App/Token/Planilha/PIN -->
   <script>
     window.GRANTOP_CFG = {
-      API_URL: "https://script.google.com/macros/s/SEU_WEBAPP/exec",
+      API_URL: "https://script.google.com/macros/s/AKfycbzjSd2ZgYdAe4fRnrTO7TA12d1yZKFrDEfU4s10acjdPsLjQMq6Q9-wty_q5hFYyhX4EA/exec",
       TOKEN  : "2400",
-      SS_ID  : "SEU_SS_ID",
-      UI_PIN : "2400"
+      SS_ID  : "1qDYeyVSAlOFfUEMiJhAEYiOzW7PitpKh1eJWd83R8Bs",
+      UI_PIN : "2400" // PIN simples no HTML
     };
   </script>
 
@@ -44,7 +38,7 @@ index_html = r"""<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <!-- PIN GATE (sempre, sem localStorage) -->
+  <!-- PIN GATE -->
   <div id="pinGate" style="position:fixed;inset:0;background:#0b1220;display:flex;align-items:center;justify-content:center;z-index:50;">
     <div class="card p-6 w-[92%] max-w-sm text-center">
       <img src="logo.png" alt="GRANTOP" class="mx-auto mb-4 h-10 opacity-80" />
@@ -79,12 +73,30 @@ index_html = r"""<!DOCTYPE html>
 
   <!-- INDICADORES -->
   <section class="p-4 grid grid-cols-1 md:grid-cols-6 gap-3">
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Créditos (Total)</div><div class="big" id="kCredTot">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Folha (Total)</div><div class="big" id="kFolhaTot">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Fixas Pendentes</div><div class="big" id="kFixPend">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Saldo Previsto</div><div class="big" id="kSaldoPrevTop">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Valor a Receber</div><div class="big" id="kAReceber">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Valor Recebido</div><div class="big" id="kRecebido">R$ 0,00</div></div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Créditos (Total)</div>
+      <div class="big" id="kCredTot">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Folha (Total)</div>
+      <div class="big" id="kFolhaTot">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Fixas Pendentes</div>
+      <div class="big" id="kFixPend">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Saldo Previsto</div>
+      <div class="big" id="kSaldoPrevTop">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Valor a Receber</div>
+      <div class="big" id="kAReceber">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Valor Recebido</div>
+      <div class="big" id="kRecebido">R$ 0,00</div>
+    </div>
   </section>
 
   <!-- NAV -->
@@ -95,7 +107,6 @@ index_html = r"""<!DOCTYPE html>
     <button class="tab" data-tab="contas">Contas da Empresa</button>
     <button class="tab" data-tab="impParc">Impostos Parcelados</button>
     <button class="tab" data-tab="impMes">Imposto do Mês</button>
-    <button class="tab" data-tab="clientes">Clientes</button>
     <button class="tab" data-tab="resumo">Resumo</button>
   </nav>
 
@@ -106,6 +117,7 @@ index_html = r"""<!DOCTYPE html>
     <!-- FUNCIONÁRIOS -->
     <section id="tab-func" class="card p-4">
       <h2 class="font-semibold mb-3">Funcionários</h2>
+
       <form id="formFunc" class="grid md:grid-cols-6 gap-3 items-end">
         <div class="md:col-span-2"><label class="block text-sm mb-1">Funcionário</label><input id="fnNome" required /></div>
         <div><label class="block text-sm mb-1">Salário (R$)</label><input id="fnSal" inputmode="decimal" /></div>
@@ -123,6 +135,7 @@ index_html = r"""<!DOCTYPE html>
         <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="fnClear">Limpar</button></div>
         <input type="hidden" id="fnId" />
       </form>
+
       <div class="mt-6 overflow-x-auto">
         <table>
           <thead><tr><th>ID</th><th>Funcionário</th><th>Salário (ajustado)</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th><th>Ações</th></tr></thead>
@@ -132,9 +145,10 @@ index_html = r"""<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- CRÉDITOS (FATURAMENTO) -->
+    <!-- CRÉDITOS -->
     <section id="tab-creditos" class="card p-4 hidden">
       <h2 class="font-semibold mb-3">Créditos (Faturamento)</h2>
+
       <form id="formCred" class="grid md:grid-cols-6 gap-3 items-end">
         <div><label class="block text-sm mb-1">Data</label><input id="crData" type="date" required /></div>
         <div class="md:col-span-2"><label class="block text-sm mb-1">Cliente</label><input id="crCliente" required /></div>
@@ -148,6 +162,7 @@ index_html = r"""<!DOCTYPE html>
         <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="crClear">Limpar</button></div>
         <input type="hidden" id="crId" />
       </form>
+
       <div class="mt-6 overflow-x-auto">
         <table>
           <thead>
@@ -168,6 +183,7 @@ index_html = r"""<!DOCTYPE html>
           <select id="filtroStatus" class="pill"><option value="">Status: todos</option><option>Pendente</option><option>Pago</option></select>
         </div>
       </div>
+
       <form id="formFixa" class="grid md:grid-cols-7 gap-3 items-end">
         <div class="md:col-span-2"><label class="block text-sm mb-1">Descrição</label><input id="cxDesc" required /></div>
         <div><label class="block text-sm mb-1">Categoria</label><input id="cxCat" /></div>
@@ -180,6 +196,7 @@ index_html = r"""<!DOCTYPE html>
         <div class="md:col-span-7 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="cxClear">Limpar</button></div>
         <input type="hidden" id="cxId" />
       </form>
+
       <div class="mt-6 overflow-x-auto">
         <table>
           <thead><tr><th>ID</th><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
@@ -202,6 +219,7 @@ index_html = r"""<!DOCTYPE html>
         <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ceClear">Limpar</button></div>
         <input type="hidden" id="ceId" />
       </form>
+
       <div class="mt-6 overflow-x-auto">
         <table>
           <thead><tr><th>ID</th><th>Banco</th><th>Tipo</th><th>Agência</th><th>Conta</th><th>PIX</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
@@ -225,6 +243,7 @@ index_html = r"""<!DOCTYPE html>
         <div class="md:col-span-7 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="ipClear">Limpar</button></div>
         <input type="hidden" id="ipId" />
       </form>
+
       <div class="mt-6 overflow-x-auto">
         <table>
           <thead><tr><th>ID</th><th>Descrição</th><th>Tributo</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
@@ -247,38 +266,13 @@ index_html = r"""<!DOCTYPE html>
         <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="imClear">Limpar</button></div>
         <input type="hidden" id="imId" />
       </form>
+
       <div class="mt-6 overflow-x-auto">
         <table>
           <thead><tr><th>Mês/Ano</th><th>Tributo</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
           <tbody id="tbodyImpMes"></tbody>
         </table>
         <div id="imEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem registros.</div>
-      </div>
-    </section>
-
-    <!-- CLIENTES (NOVO) -->
-    <section id="tab-clientes" class="card p-4 hidden">
-      <h2 class="font-semibold mb-3">Clientes</h2>
-      <form id="formCli" class="grid md:grid-cols-6 gap-3 items-end">
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Nome</label><input id="clNome" required /></div>
-        <div><label class="block text-sm mb-1">WhatsApp</label><input id="clZap" placeholder="+55 11 99999-9999" /></div>
-        <div><label class="block text-sm mb-1">E-mail</label><input id="clEmail" type="email" /></div>
-        <div><label class="block text-sm mb-1">Empresa</label><input id="clEmp" /></div>
-        <div class="md:col-span-2"><label class="block text-sm mb-1">Endereço</label><input id="clEnd" /></div>
-        <div class="md:col-span-6"><label class="block text-sm mb-1">Obs</label><input id="clObs" /></div>
-        <div class="md:col-span-6 flex gap-2">
-          <button class="btn" type="submit">Salvar</button>
-          <button class="btn" type="button" id="clClear">Limpar</button>
-          <button class="btn" type="button" id="clPaste">Colar do WhatsApp</button>
-        </div>
-        <input type="hidden" id="clId" />
-      </form>
-      <div class="mt-6 overflow-x-auto">
-        <table>
-          <thead><tr><th>ID</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Empresa</th><th>Endereço</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyCli"></tbody>
-        </table>
-        <div id="clEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem clientes.</div>
       </div>
     </section>
 
@@ -297,9 +291,16 @@ index_html = r"""<!DOCTYPE html>
   <script>
     // ===== Utils
     const { API_URL, TOKEN, SS_ID } = window.GRANTOP_CFG || {};
+
     const moneyBR = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const toNumberBR = v => v? Number(String(v).replace(/\./g,'').replace(',','.'))||0 : 0;
-    const fmtDateBR = (val) => { if (!val) return ''; const s = String(val).split('T')[0]; return /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? s.split('-').reverse().join('/') : s; };
+
+    const fmtDateBR = (val) => {
+      if (!val) return '';
+      const s = String(val).split('T')[0];
+      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('/') : s;
+    };
+
     function showError(msg){ const el=err; el.textContent=String(msg||'Erro'); el.classList.remove('hidden'); }
     function hideError(){ err.classList.add('hidden'); err.textContent=''; }
 
@@ -322,36 +323,47 @@ index_html = r"""<!DOCTYPE html>
       ping:     ()=>jsonp(API_URL+'?action=ping'),
       config:   ()=>jsonp(API_URL+'?action=config'),
       setMonth: (yyyymm)=>jsonp(API_URL+'?action=setmonth&mes='+encodeURIComponent(yyyymm)),
+
+      // funcs
       listFunc: ()=>jsonp(API_URL+'?action=listfuncionarios'),
       saveFunc: (p)=>jsonp(API_URL+'?action=savefunc&payload='+encodeURIComponent(JSON.stringify(p))),
       delFunc:  (id)=>jsonp(API_URL+'?action=deletefunc&id='+encodeURIComponent(id)),
+
+      // creditos
       listCred: ()=>jsonp(API_URL+'?action=listreg'),
       saveCred: (p)=>jsonp(API_URL+'?action=savereg&payload='+encodeURIComponent(JSON.stringify(p))),
       delCred:  (id)=>jsonp(API_URL+'?action=delreg&id='+encodeURIComponent(id)),
+
+      // fixas
       listFix:  ()=>jsonp(API_URL+'?action=listcontasfixas'),
       saveFix:  (p)=>jsonp(API_URL+'?action=savefixa&payload='+encodeURIComponent(JSON.stringify(p))),
       delFix:   (id)=>jsonp(API_URL+'?action=deletefixa&id='+encodeURIComponent(id)),
+
+      // Contas da empresa
       listContas: ()=>jsonp(API_URL+'?action=listcontasempresa'),
       saveConta:  (p)=>jsonp(API_URL+'?action=savecontaempresa&payload='+encodeURIComponent(JSON.stringify(p))),
       delConta:   (id)=>jsonp(API_URL+'?action=delcontaempresa&id='+encodeURIComponent(id)),
+
+      // Impostos parcelados
       listImpParc: ()=>jsonp(API_URL+'?action=listimpparc'),
       saveImpParc: (p)=>jsonp(API_URL+'?action=saveimpparc&payload='+encodeURIComponent(JSON.stringify(p))),
       delImpParc:  (id)=>jsonp(API_URL+'?action=delimpparc&id='+encodeURIComponent(id)),
+
+      // Imposto do mês
       listImpMes: ()=>jsonp(API_URL+'?action=listimpmes'),
       saveImpMes: (p)=>jsonp(API_URL+'?action=saveimpmes&payload='+encodeURIComponent(JSON.stringify(p))),
       delImpMes:  (id)=>jsonp(API_URL+'?action=delimpmes&id='+encodeURIComponent(id)),
-      listCli: ()=>jsonp(API_URL+'?action=listclientes'),
-      saveCli: (p)=>jsonp(API_URL+'?action=savecliente&payload='+encodeURIComponent(JSON.stringify(p))),
-      delCli:  (id)=>jsonp(API_URL+'?action=delcliente&id='+encodeURIComponent(id)),
+
+      // resumo
       resumo:   ()=>jsonp(API_URL+'?action=resumo')
     };
 
-    // ===== Tabs
+    // ===== Estado/UI
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(b=>b.addEventListener('click',()=>{
       tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
       const t=b.dataset.tab;
-      ['func','creditos','fixas','contas','impParc','impMes','clientes','resumo'].forEach(id=>{
+      ['func','creditos','fixas','contas','impParc','impMes','resumo'].forEach(id=>{
         document.getElementById('tab-'+id).classList.toggle('hidden', id!==t);
       });
       if(t==='resumo') renderResumoCards();
@@ -360,8 +372,21 @@ index_html = r"""<!DOCTYPE html>
     const connEl = document.getElementById('conn');
     const setConn = (t,cls)=>{ connEl.textContent=t; connEl.className='text-xs '+(cls||'text-slate-300'); };
 
-    let cacheFunc=[], cacheFixas=[], cacheFixasRaw=[], cacheCred=[], cacheContas=[], cacheImpParc=[], cacheImpMes=[], cacheCli=[];
+    let cacheFunc=[], cacheFixas=[], cacheFixasRaw=[], cacheCred=[];
+    let cacheContas=[], cacheImpParc=[], cacheImpMes=[];
     document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
+
+    // ===== MÊS VIGENTE
+    const mesInput = document.getElementById('mesVigente');
+    document.getElementById('btnMesSalvar').addEventListener('click', ()=>{
+      const v = mesInput.value; // yyyy-mm
+      if(!/^\d{4}-\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
+      api.setMonth(v).then(r=>{
+        if(!r||!r.ok){ alert('Falha ao definir mês.'); return; }
+        const info = r.result || r; // tolerância
+        document.getElementById('sumMsg').textContent = 'Resumo atualizado para '+ (info.mesAtualLabel || '');
+      });
+    });
 
     // ===== Funcionários
     function calcPrev(){
@@ -380,6 +405,7 @@ index_html = r"""<!DOCTYPE html>
     ['fnSal','fnAdic','fnDiaQtd','fnDiaVal','fnVT','fnVR','fnDesc'].forEach(id=>{
       document.getElementById(id).addEventListener('input', calcPrev);
     });
+
     function renderFuncionarios(list){
       cacheFunc=list.slice();
       const tb=document.getElementById('tbodyFunc'); tb.innerHTML='';
@@ -392,13 +418,19 @@ index_html = r"""<!DOCTYPE html>
           <td><button class="btn js-edit-f" data-id="${r.id}">Editar</button> <button class="btn js-del-f" data-id="${r.id}">Excluir</button></td>`;
         tb.appendChild(tr);
       });
-      renderResumoCards(); recalcTopCards();
+      renderResumoCards();
+      recalcTopCards();
     }
+
     document.getElementById('formFunc').addEventListener('submit', e=>{
       e.preventDefault();
       const k = calcPrev();
       const payload={ id:fnId.value||undefined, funcionario:fnNome.value.trim(), salario:k.salAdj, vt:toNumberBR(fnVT.value), vr:toNumberBR(fnVR.value) };
-      api.saveFunc(payload).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00'; loadFuncionarios(); }).catch(ex=>showError(ex.message));
+      api.saveFunc(payload).then(r=>{
+        if(!r||!r.ok){ alert('Falha ao salvar.'); return; }
+        e.target.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00';
+        loadFuncionarios();
+      }).catch(ex=>showError(ex.message));
     });
     document.getElementById('fnClear').addEventListener('click', ()=>{ formFunc.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00'; });
     document.body.addEventListener('click', ev=>{
@@ -417,9 +449,22 @@ index_html = r"""<!DOCTYPE html>
     });
 
     // ===== Créditos
-    function extrasToObs(nf,link,venc,obsLivre){ const p=[]; if(nf) p.push('NF:'+nf); if(link) p.push('boleto:'+link); if(venc) p.push('venc:'+venc); if(obsLivre) p.push(obsLivre); return p.join(' | '); }
-    function parseObs(obs){ obs=String(obs||''); const mNF=obs.match(/NF:([^|]+)/i); const mL =obs.match(/boleto:([^|]+)/i); const mV =obs.match(/venc:([\d-]+)/i); return { nf:mNF?mNF[1].trim():'', boleto:mL?mL[1].trim():'', venc:mV?mV[1].trim():'', resto:obs }; }
-    function badgePago(val){ const s = String(val||'').trim().toLowerCase(); if(s==='sim') return '<span class="badge badge-green">Sim</span>'; return '<span class="badge badge-red">Não</span>'; }
+    function extrasToObs(nf,link,venc,obsLivre){
+      const p=[]; if(nf) p.push('NF:'+nf); if(link) p.push('boleto:'+link); if(venc) p.push('venc:'+venc); if(obsLivre) p.push(obsLivre);
+      return p.join(' | ');
+    }
+    function parseObs(obs){
+      obs=String(obs||'');
+      const mNF=obs.match(/NF:([^|]+)/i);
+      const mL =obs.match(/boleto:([^|]+)/i);
+      const mV =obs.match(/venc:([\d-]+)/i);
+      return { nf:mNF?mNF[1].trim():'', boleto:mL?mL[1].trim():'', venc:mV?mV[1].trim():'', resto:obs };
+    }
+    function badgePago(val){
+      const s = String(val||'').trim().toLowerCase();
+      if(s==='sim') return '<span class="badge badge-green">Sim</span>';
+      return '<span class="badge badge-red">Não</span>';
+    }
     function renderCreditos(list){
       cacheCred=list.slice();
       const tb=document.getElementById('tbodyCred'); tb.innerHTML='';
@@ -433,13 +478,17 @@ index_html = r"""<!DOCTYPE html>
           <td><button class="btn js-edit-c" data-id="${r._rowId}">Editar</button> <button class="btn js-del-c" data-id="${r._rowId}">Excluir</button></td>`;
         tb.appendChild(tr);
       });
-      renderResumoCards(); recalcTopCards();
+      renderResumoCards();
+      recalcTopCards();
     }
     document.getElementById('formCred').addEventListener('submit', e=>{
       e.preventDefault();
       const obs = extrasToObs(crNF.value.trim(), crBoleto.value.trim(), crVenc.value, crObs.value.trim());
       const payload={ id:crId.value||undefined, data:crData.value, cliente:crCliente.value.trim(), servico:crServico.value.trim(), valor:toNumberBR(crValor.value), pago:crPago.value, obs };
-      api.saveCred(payload).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar crédito.'); return; } e.target.reset(); crId.value=''; loadCreditos(); }).catch(ex=>showError(ex.message));
+      api.saveCred(payload).then(r=>{
+        if(!r||!r.ok){ alert('Falha ao salvar crédito.'); return; }
+        e.target.reset(); crId.value=''; loadCreditos();
+      }).catch(ex=>showError(ex.message));
     });
     document.getElementById('crClear').addEventListener('click', ()=>{ formCred.reset(); crId.value=''; });
     document.body.addEventListener('click', ev=>{
@@ -448,7 +497,7 @@ index_html = r"""<!DOCTYPE html>
         const id=t.dataset.id;
         const it=cacheCred.find(x=>String(x._rowId)===String(id)); if(!it) return;
         const ex=parseObs(it.obs||it.observacoes);
-        crId.value=id; crData.value=/^\\d{4}-\\d{2}-\\d{2}$/.test(it.data)?it.data:''; crCliente.value=it.cliente||''; crServico.value=(it.servico||it.endereco||'');
+        crId.value=id; crData.value=/^\d{4}-\d{2}-\d{2}$/.test(it.data)?it.data:''; crCliente.value=it.cliente||''; crServico.value=(it.servico||it.endereco||'');
         crValor.value=String(it.valor).replace('.',','); crNF.value=ex.nf||''; crBoleto.value=ex.boleto||''; crVenc.value=ex.venc||''; crPago.value=(it.pago||'Não');
         crObs.value=(String(ex.resto||'').replace(/(?:NF:[^|]+|boleto:[^|]+|venc:[^|]+)\s*\|?\s*/gi,'').trim());
         window.scrollTo({top:0, behavior:'smooth'});
@@ -460,7 +509,7 @@ index_html = r"""<!DOCTYPE html>
     });
 
     // ===== Fixas
-    function parseObsToExtras(obs){ obs=String(obs||''); const rec=/\\[REC\\]/i.test(obs); const m=obs.match(/(?:link\\s*:\\s*)(\\S+)/i); return {recorrente:rec,link:m?m[1]:''}; }
+    function parseObsToExtras(obs){ obs=String(obs||''); const rec=/\[REC\]/i.test(obs); const m=obs.match(/(?:link\s*:\s*)(\S+)/i); return {recorrente:rec,link:m?m[1]:''}; }
     function buildObs(rec,link,livre){ const p=[]; if(rec==='Sim') p.push('[REC]'); if(link) p.push('link: '+link); if(livre) p.push(livre); return p.join(' | '); }
     function renderFixas(listRaw){
       cacheFixasRaw=listRaw.slice();
@@ -480,7 +529,8 @@ index_html = r"""<!DOCTYPE html>
       const cats={}; listRaw.forEach(r=>{ const c=String(r.categoria||''); if(c) cats[c]=1; });
       const cur=filtroCat.value; filtroCat.innerHTML='<option value="">Categoria: todas</option>';
       Object.keys(cats).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; if(c===cur) o.selected=true; filtroCat.appendChild(o); });
-      renderResumoCards(); recalcTopCards();
+      renderResumoCards();
+      recalcTopCards();
     }
     filtroCat.addEventListener('change', ()=>renderFixas(cacheFixasRaw));
     filtroStatus.addEventListener('change', ()=>renderFixas(cacheFixasRaw));
@@ -497,7 +547,7 @@ index_html = r"""<!DOCTYPE html>
         const id=t.dataset.id;
         const it=cacheFixasRaw.find(x=>String(x.id)===String(id)); if(!it) return;
         const ex=parseObsToExtras(it.observacoes||'');
-        cxId.value=it.id; cxDesc.value=it.descricao||''; cxCat.value=it.categoria||''; cxVenc.value=/^\\d{4}-\\d{2}-\\d{2}$/.test(it.vencimento)?it.vencimento:''; cxValor.value=String(it.valor).replace('.',','); cxStatus.value=it.status||'Pendente'; cxRec.value=ex.recorrente?'Sim':'Não'; cxLink.value=ex.link||''; cxObs.value=(String(it.observacoes||'').replace(/\\s*\\[REC\\]\\s*/i,'').replace(/\\s*link\\s*:\\s*\\S+\\s*/i,'')).trim();
+        cxId.value=it.id; cxDesc.value=it.descricao||''; cxCat.value=it.categoria||''; cxVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; cxValor.value=String(it.valor).replace('.',','); cxStatus.value=it.status||'Pendente'; cxRec.value=ex.recorrente?'Sim':'Não'; cxLink.value=ex.link||''; cxObs.value=(String(it.observacoes||'').replace(/\s*\[REC\]\s*/i,'').replace(/\s*link\s*:\s*\S+\s*/i,'')).trim();
         window.scrollTo({top:0, behavior:'smooth'});
       }
       if(t.classList.contains('js-del-x')){
@@ -562,7 +612,7 @@ index_html = r"""<!DOCTYPE html>
       if(t.classList.contains('js-edit-ip')){
         const it=cacheImpParc.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return;
         ipId.value=it.id; ipDesc.value=it.descricao||''; ipTributo.value=it.tributo||''; ipParcela.value=it.parcela||'';
-        ipVenc.value=/^\\d{4}-\\d{2}-\\d{2}$/.test(it.vencimento)?it.vencimento:''; ipValor.value=String(it.valor).replace('.',','); ipPago.value=it.pago||'Não'; ipObs.value=it.obs||'';
+        ipVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; ipValor.value=String(it.valor).replace('.',','); ipPago.value=it.pago||'Não'; ipObs.value=it.obs||'';
         window.scrollTo({top:0, behavior:'smooth'});
       }
       if(t.classList.contains('js-del-ip')){
@@ -594,57 +644,12 @@ index_html = r"""<!DOCTYPE html>
       const t=ev.target;
       if(t.classList.contains('js-edit-im')){
         const it=cacheImpMes.find(x=>String(x._rowId)===String(t.dataset.id)); if(!it) return;
-        imId.value=it._rowId; imMes.value=(it.mesAno||''); imTributo.value=it.tributo||''; imVenc.value=/^\\d{4}-\\d{2}-\\d{2}$/.test(it.vencimento)?it.vencimento:''; imValor.value=String(it.valor).replace('.',','); imPago.value=it.pago||'Não'; imObs.value=it.obs||'';
+        imId.value=it._rowId; imMes.value=(it.mesAno||''); imTributo.value=it.tributo||''; imVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; imValor.value=String(it.valor).replace('.',','); imPago.value=it.pago||'Não'; imObs.value=it.obs||'';
         window.scrollTo({top:0, behavior:'smooth'});
       }
       if(t.classList.contains('js-del-im')){
         if(!confirm('Excluir imposto do mês?')) return;
         api.delImpMes(t.dataset.id).then(r=>{ if(!r||!r.ok){alert('Falha ao excluir.');return;} loadImpMes(); }).catch(ex=>showError(ex.message));
-      }
-    });
-
-    // ===== Clientes
-    function renderClientes(list){
-      cacheCli=list.slice();
-      const tb=document.getElementById('tbodyCli'); tb.innerHTML='';
-      clEmpty.classList.toggle('hidden', list.length>0);
-      list.forEach(r=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${r.id}</td><td>${r.nome||''}</td><td>${r.whatsapp||''}</td><td>${r.email||''}</td><td>${r.empresa||''}</td>
-          <td>${r.endereco||''}</td><td>${r.obs||''}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-cl" data-id="${r.id}">Editar</button> <button class="btn js-del-cl" data-id="${r.id}">Excluir</button></td>`;
-        tb.appendChild(tr);
-      });
-    }
-    formCli.addEventListener('submit', e=>{
-      e.preventDefault();
-      const p={ id:clId.value||undefined, nome:clNome.value.trim(), whatsapp:clZap.value.trim(), email:clEmail.value.trim(), empresa:clEmp.value.trim(), endereco:clEnd.value.trim(), obs:clObs.value.trim() };
-      api.saveCli(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); clId.value=''; loadClientes(); }).catch(ex=>showError(ex.message));
-    });
-    clClear.addEventListener('click', ()=>{ formCli.reset(); clId.value=''; });
-    document.getElementById('clPaste').addEventListener('click', async ()=>{
-      try{
-        const txt = await navigator.clipboard.readText();
-        if(!txt) return alert('Área de transferência vazia.');
-        // heurística simples
-        const tel = (txt.match(/(?:\+?55\s*)?\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/)||[''])[0];
-        const email = (txt.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[''])[0];
-        clZap.value = tel||''; clEmail.value=email||'';
-        // nome: primeira linha ou trecho antes do tel
-        const line = txt.split(/\n/)[0]; clNome.value = clNome.value || (line.replace(tel||'','').trim());
-        clObs.value = clObs.value || txt.substring(0, 500);
-      }catch(e){ alert('Não consegui ler a área de transferência. Permita o acesso.'); }
-    });
-    document.body.addEventListener('click', ev=>{
-      const t=ev.target;
-      if(t.classList.contains('js-edit-cl')){
-        const it=cacheCli.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return;
-        clId.value=it.id; clNome.value=it.nome||''; clZap.value=it.whatsapp||''; clEmail.value=it.email||''; clEmp.value=it.empresa||''; clEnd.value=it.endereco||''; clObs.value=it.obs||'';
-        window.scrollTo({top:0, behavior:'smooth'});
-      }
-      if(t.classList.contains('js-del-cl')){
-        if(!confirm('Excluir cliente?')) return;
-        api.delCli(t.dataset.id).then(r=>{ if(!r||!r.ok){alert('Falha ao excluir.');return;} loadClientes(); }).catch(ex=>showError(ex.message));
       }
     });
 
@@ -670,6 +675,7 @@ index_html = r"""<!DOCTYPE html>
       const aReceber = cacheCred.reduce((s,x)=>s+(String(x.pago||'Não')==='Sim'?0:Number(x.valor||0)),0);
       const recebido = cacheCred.reduce((s,x)=>s+(String(x.pago||'Não')==='Sim'?Number(x.valor||0):0),0);
       const saldoPrev = credTot - (totF + fixPend);
+
       kCredTot.textContent = 'R$ '+moneyBR(credTot);
       kFolhaTot.textContent = 'R$ '+moneyBR(totF);
       kFixPend.textContent  = 'R$ '+moneyBR(fixPend);
@@ -679,68 +685,61 @@ index_html = r"""<!DOCTYPE html>
     }
 
     // ===== Resumo (planilha)
-    btnResumo.addEventListener('click', ()=>{ api.resumo().then(r=>{ if(!r||!r.ok){ alert('Falha ao atualizar resumo.'); return; } sumMsg.textContent='Resumo atualizado na planilha.'; }).catch(ex=>showError(ex.message)); });
+    btnResumo.addEventListener('click', ()=>{ api.resumo().then(r=>{ if(!r||!r.ok){ alert('Falha ao atualizar resumo.'); return; } sumMsg.textContent='Resumo atualizado na planilha.'; }); });
 
-    // ===== Loads
+    // ===== Conectar / carregar tudo
+    btnReload.addEventListener('click', e=>{
+      e.preventDefault(); connectAndLoad();
+    });
+
     function loadFuncionarios(){ api.listFunc().then(r=>{ if(!r||!r.ok){showError('Listar funcionários falhou.');return;} hideError(); renderFuncionarios(r.result||[]); }).catch(e=>showError(e.message)); }
     function loadCreditos(){ api.listCred().then(r=>{ if(!r||!r.ok){showError('Listar créditos falhou.');return;} hideError(); renderCreditos(r.result||[]); }).catch(e=>showError(e.message)); }
     function loadFixas(){ api.listFix().then(r=>{ if(!r||!r.ok){showError('Listar fixas falhou.');return;} hideError(); renderFixas(r.result||[]); }).catch(e=>showError(e.message)); }
     function loadContas(){ api.listContas().then(r=>{ if(!r||!r.ok){showError('Listar contas falhou.');return;} hideError(); renderContas(r.result||[]); }).catch(e=>showError(e.message)); }
     function loadImpParc(){ api.listImpParc().then(r=>{ if(!r||!r.ok){showError('Listar impostos parcelados falhou.');return;} hideError(); renderImpParc(r.result||[]); }).catch(e=>showError(e.message)); }
     function loadImpMes(){ api.listImpMes().then(r=>{ if(!r||!r.ok){showError('Listar imposto do mês falhou.');return;} hideError(); renderImpMes(r.result||[]); }).catch(e=>showError(e.message)); }
-    function loadClientes(){ api.listCli().then(r=>{ if(!r||!r.ok){showError('Listar clientes falhou.');return;} hideError(); renderClientes(r.result||[]); }).catch(e=>showError(e.message)); }
 
     function connectAndLoad(){
       setConn('Conectando…');
-      Promise.all([api.ping(), api.config()])
-        .then(([pg, cfgR])=>{
-          if(!pg?.ok){ throw new Error('Ping falhou. Verifique API_URL/TOKEN.'); }
+      Promise.all([api.ping(), api.config(), api.listFunc(), api.listCred(), api.listFix(), api.listContas(), api.listImpParc(), api.listImpMes()])
+        .then(all=>{
           setConn('Conectado','text-green-300');
-          const cfg = cfgR?.result || {};
-          if(cfg.mesAtualYYYYMM) mesVigente.value = cfg.mesAtualYYYYMM;
-          loadFuncionarios(); loadCreditos(); loadFixas(); loadContas(); loadImpParc(); loadImpMes(); loadClientes();
+          const cfg = all[1]?.result || {};
+          if(cfg.mesAtualYYYYMM) mesInput.value = cfg.mesAtualYYYYMM; // yyyy-mm
+          renderFuncionarios(all[2]?.result||[]);
+          renderCreditos(all[3]?.result||[]);
+          renderFixas(all[4]?.result||[]);
+          renderContas(all[5]?.result||[]);
+          renderImpParc(all[6]?.result||[]);
+          renderImpMes(all[7]?.result||[]);
           recalcTopCards();
         })
-        .catch((err)=>{
-          console.error(err);
-          setConn('Erro','text-rose-300');
-          showError('Falha ao conectar: '+(err.message||err)+
-            '\\nVerifique API_URL publicada como Web App (Qualquer pessoa com o link), e TOKEN.');
-        });
+        .catch((err)=>{ console.error(err); setConn('Erro','text-rose-300'); showError('Falha ao conectar.'); });
     }
-    btnReload.addEventListener('click', e=>{ e.preventDefault(); connectAndLoad(); });
 
-    // ===== MÊS VIGENTE
-    const mesInput = document.getElementById('mesVigente');
-    document.getElementById('btnMesSalvar').addEventListener('click', ()=>{
-      const v = mesInput.value; // yyyy-mm
-      if(!/^\\d{4}-\\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
-      api.setMonth(v).then(r=>{
-        if(!r||!r.ok){ alert('Falha ao definir mês.'); return; }
-        const info = r.result || r;
-        document.getElementById('sumMsg').textContent = 'Resumo atualizado para '+ (info.mesAtualLabel || '');
-        connectAndLoad();
-      });
-    });
-
-    // ===== PIN simples (sempre solicitar)
+    // ===== PIN simples (HTML)
     (function pinInit(){
       const wantPIN = (window.GRANTOP_CFG && window.GRANTOP_CFG.UI_PIN);
+      if(!wantPIN){ document.getElementById('pinGate').style.display='none'; safeInit(); return; }
+      if(localStorage.getItem('grantop_pin_ok')==='1'){ document.getElementById('pinGate').style.display='none'; safeInit(); return; }
+
       const gate=document.getElementById('pinGate');
       const input=document.getElementById('pinInput');
       const btn=document.getElementById('pinOk');
       const errEl=document.getElementById('pinErr');
       function tryOpen(){
         const ok = String(input.value||'')===String(window.GRANTOP_CFG.UI_PIN);
-        if(ok){ gate.style.display='none'; safeInit(); }
+        if(ok){ localStorage.setItem('grantop_pin_ok','1'); gate.style.display='none'; safeInit(); }
         else{ errEl.textContent='PIN incorreto'; input.focus(); input.select(); }
       }
-      if(!wantPIN){ gate.style.display='none'; safeInit(); return; }
       btn.addEventListener('click', tryOpen);
       input.addEventListener('keydown', e=>{ if(e.key==='Enter') tryOpen(); });
-      document.getElementById('btnLogout').addEventListener('click', (e)=>{ e.preventDefault(); location.reload(); });
-      const u=new URL(location.href); if(u.searchParams.get('logout')==='1'){ u.searchParams.delete('logout'); location.replace(u.toString()); }
+
+      // Sair (limpar PIN)
+      document.getElementById('btnLogout').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('grantop_pin_ok'); location.reload(); });
+      const u=new URL(location.href); if(u.searchParams.get('logout')==='1'){ localStorage.removeItem('grantop_pin_ok'); u.searchParams.delete('logout'); location.replace(u.toString()); }
     })();
+
     function safeInit(){
       document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
       connectAndLoad();
@@ -748,4 +747,3 @@ index_html = r"""<!DOCTYPE html>
   </script>
 </body>
 </html>
-"""
