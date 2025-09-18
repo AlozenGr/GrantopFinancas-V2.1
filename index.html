@@ -1,497 +1,145 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>GRANTOP • Painel (Sidebar)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GRANTOP • Finanças V2</title>
+  <link rel="icon" type="image/png" href="logo.png" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="config.js"></script>
   <style>
-    :root { --bg:#0b1220; --panel:#0f172a; --border:#334155; --txt:#e2e8f0; }
-    body { background:var(--bg); color:var(--txt); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial }
-    .card{ border:1px solid #33415566; border-radius:12px; background:var(--panel) }
-    .tab{ border:1px solid #334155; border-radius:9999px; padding:.35rem .75rem; cursor:pointer }
-    .tab.active{ outline:2px solid #60a5fa }
-    input, select, textarea{ background:#0b1220; border:1px solid #334155; border-radius:8px; padding:.5rem .6rem; width:100% }
-    table { border-collapse: collapse; width:100% }
-    th, td { border-bottom:1px solid #223047; padding:.45rem .5rem; font-size:.88rem }
-    .btn{ display:inline-flex; align-items:center; gap:.5rem; border:1px solid #334155; border-radius:8px; padding:.45rem .7rem; background:#0f172a }
-    .btn:hover{ background:#0b1220 }
-    .pill{ padding:.15rem .55rem; border-radius:999px; font-size:.75rem }
-    .ok{ background:#064e3b; color:#d1fae5; border:1px solid #34d399 }
-    .bad{ background:#7f1d1d; color:#fecaca; border:1px solid #ef4444 }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem }
-    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:.6rem }
-    .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem }
+    body { background-color: #0f172a; color: #e2e8f0; }
+    .card { border: 1px solid #1e293b; border-radius: 12px; padding: 16px; }
+    .tab { cursor: pointer; }
+    .tab.active { background: #1e293b; }
   </style>
 </head>
-<body class="p-4">
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-3">
+<body class="min-h-screen">
+
+  <!-- PIN Gate -->
+  <div id="pin-gate" style="
+    position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.7); backdrop-filter: blur(2px);">
+    <div style="width:100%; max-width:360px; background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:12px; padding:18px;">
+      <h3 style="margin:0 0 10px; font:600 18px/1.2 ui-sans-serif,system-ui;">Acesso restrito</h3>
+      <p style="margin:0 0 12px; opacity:.8; font-size:14px">Informe o PIN para continuar.</p>
+      <input id="pin-input" type="password" inputmode="numeric" placeholder="PIN"
+            style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#0b1220; color:#e2e8f0">
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button id="pin-ok" style="flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1f2937; color:#e2e8f0">
+          Entrar
+        </button>
+        <button id="pin-clear" title="Esquecer PIN salvo" style="padding:10px; border-radius:8px; border:1px solid #334155; background:#0b1220; color:#e2e8f0">
+          Limpar
+        </button>
+      </div>
+      <div id="pin-err" style="margin-top:10px; color:#fecaca; display:none; font-size:13px;">PIN incorreto.</div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="flex items-center justify-between p-4 bg-slate-900 shadow">
     <div class="flex items-center gap-3">
-      <img src="logo.png" alt="GRANTOP" class="h-8" />
-      <h2 class="text-lg font-semibold">GRANTOP • Painel</h2>
+      <img src="logo.png" alt="GRANTOP" class="h-8 w-auto" />
+      <h1 class="text-lg font-bold">GRANTOP • Finanças V2</h1>
+      <span id="status" class="text-sm text-green-400">Conectado</span>
     </div>
-    <div class="flex items-center gap-2 text-sm">
-      <label>Mês vigente</label>
-      <input id="mesVigente" type="month" class="px-2 py-1" />
-      <button id="btnMesSalvar" class="btn">Aplicar</button>
-      <button id="btnResumo" class="btn">Atualizar Resumo</button>
+    <div class="flex items-center gap-3">
+      <input id="mes-vigente" type="month" class="text-slate-900 rounded px-2 py-1" />
+      <button onclick="aplicarMes()" class="px-3 py-1 rounded bg-slate-700">Aplicar</button>
+      <button onclick="gerarResumo()" class="px-3 py-1 rounded bg-slate-700">Gerar Resumo (planilha)</button>
+      <a href="#" onclick="window.location.reload()" class="text-blue-400">Recarregar</a>
     </div>
-  </div>
-  <div id="cfg" class="text-xs opacity-70 mb-3">Conectando…</div>
+  </header>
 
-  <!-- Tabs -->
-  <div class="flex flex-wrap gap-2 mb-3">
-    <div class="tab active" data-t="#t-func">Funcionários</div>
-    <div class="tab" data-t="#t-cred">Créditos</div>
-    <div class="tab" data-t="#t-fixas">Contas Fixas</div>
-    <div class="tab" data-t="#t-contas">Contas da Empresa</div>
-    <div class="tab" data-t="#t-impp">Impostos Parcelados</div>
-    <div class="tab" data-t="#t-impm">Imposto do Mês</div>
-    <div class="tab" data-t="#t-resumo">Resumo</div>
-  </div>
-
-  <!-- Funcionários -->
-  <section id="t-func" class="card p-3">
-    <form id="f-func" class="grid3 mb-3">
-      <input type="hidden" name="id" />
-      <div><label class="text-sm">Funcionário</label><input name="funcionario" required /></div>
-      <div><label class="text-sm">Salário (R$)</label><input name="salario" /></div>
-      <div class="grid2">
-        <div><label class="text-sm">VT</label><input name="vt" /></div>
-        <div><label class="text-sm">VR</label><input name="vr" /></div>
-      </div>
-      <div class="col-span-3 flex gap-2">
-        <button class="btn" type="submit">Salvar</button>
-        <button class="btn" type="button" id="fx-func">Limpar</button>
-      </div>
-    </form>
-
-    <table id="tb-func">
-      <thead><tr><th>ID</th><th>Funcionário</th><th>Salário</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Créditos -->
-  <section id="t-cred" class="card p-3 hidden">
-    <form id="f-cred" class="grid4 mb-3">
-      <input type="hidden" name="id" />
-      <div><label class="text-sm">Data</label><input type="date" name="data" required /></div>
-      <div><label class="text-sm">Cliente</label><input name="cliente" required /></div>
-      <div class="col-span-2"><label class="text-sm">Serviço / Local</label><input name="servico" required /></div>
-      <div><label class="text-sm">Valor (R$)</label><input name="valor" required /></div>
-      <div><label class="text-sm">NF (opcional)</label><input name="nf" /></div>
-      <div class="col-span-2"><label class="text-sm">Boleto (link)</label><input name="boleto" placeholder="https://..." /></div>
-      <div><label class="text-sm">Venc. boleto</label><input type="date" name="venc" /></div>
-      <div><label class="text-sm">Pago?</label>
-        <select name="pago"><option>Não</option><option>Sim</option></select>
-      </div>
-      <div class="col-span-3"><label class="text-sm">Obs</label><input name="obs" /></div>
-      <div class="col-span-1 flex gap-2 items-end">
-        <button class="btn" type="submit">Salvar</button>
-        <button class="btn" type="button" id="fx-cred">Limpar</button>
-      </div>
-    </form>
-
-    <table id="tb-cred">
-      <thead><tr><th>Data</th><th>Cliente</th><th>Serviço</th><th>Valor</th><th>NF</th><th>Venc.</th><th>Pago?</th><th>Obs</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Fixas -->
-  <section id="t-fixas" class="card p-3 hidden">
-    <form id="f-fixas" class="grid4 mb-3">
-      <input type="hidden" name="id" />
-      <div class="col-span-2"><label class="text-sm">Descrição</label><input name="descricao" required /></div>
-      <div><label class="text-sm">Categoria</label><input name="categoria" /></div>
-      <div><label class="text-sm">Vencimento</label><input type="date" name="vencimento" required /></div>
-      <div><label class="text-sm">Valor (R$)</label><input name="valor" /></div>
-      <div><label class="text-sm">Status</label><select name="status"><option>Pendente</option><option>Pago</option></select></div>
-      <div><label class="text-sm">Recorrente?</label><select name="rec"><option>Não</option><option>Sim</option></select></div>
-      <div class="col-span-4"><label class="text-sm">Boleto (link)</label><input name="link" /></div>
-      <div class="col-span-4"><label class="text-sm">Obs</label><input name="obs" /></div>
-      <div class="col-span-4 flex gap-2">
-        <button class="btn" type="submit">Salvar</button>
-        <button class="btn" type="button" id="fx-fixas">Limpar</button>
-      </div>
-    </form>
-
-    <table id="tb-fixas">
-      <thead><tr><th>ID</th><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Contas da Empresa -->
-  <section id="t-contas" class="card p-3 hidden">
-    <form id="f-contas" class="grid4 mb-3">
-      <input type="hidden" name="id" />
-      <div><label class="text-sm">Banco</label><input name="banco" /></div>
-      <div><label class="text-sm">Tipo</label><input name="tipo" placeholder="Corrente / Poupança / CNPJ" /></div>
-      <div><label class="text-sm">Agência</label><input name="agencia" /></div>
-      <div><label class="text-sm">Conta</label><input name="conta" /></div>
-      <div class="col-span-2"><label class="text-sm">PIX (chave)</label><input name="pix" /></div>
-      <div class="col-span-2"><label class="text-sm">Obs</label><input name="obs" /></div>
-      <div class="col-span-4 flex gap-2">
-        <button class="btn" type="submit">Salvar</button>
-        <button class="btn" type="button" id="fx-contas">Limpar</button>
-      </div>
-    </form>
-
-    <table id="tb-contas">
-      <thead><tr><th>ID</th><th>Banco</th><th>Tipo</th><th>Agência</th><th>Conta</th><th>PIX</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Impostos Parcelados -->
-  <section id="t-impp" class="card p-3 hidden">
-    <form id="f-impp" class="grid4 mb-3">
-      <input type="hidden" name="id" />
-      <div class="col-span-2"><label class="text-sm">Descrição</label><input name="descricao" /></div>
-      <div><label class="text-sm">Tributo</label><input name="tributo" placeholder="ISS / INSS / FGTS / DARF ..." /></div>
-      <div><label class="text-sm">Parcela</label><input name="parcela" placeholder="3/12" /></div>
-      <div><label class="text-sm">Vencimento</label><input type="date" name="vencimento" /></div>
-      <div><label class="text-sm">Valor</label><input name="valor" /></div>
-      <div><label class="text-sm">Pago</label><select name="pago"><option>Não</option><option>Sim</option></select></div>
-      <div class="col-span-4"><label class="text-sm">Obs</label><input name="obs" /></div>
-      <div class="col-span-4 flex gap-2">
-        <button class="btn" type="submit">Salvar</button>
-        <button class="btn" type="button" id="fx-impp">Limpar</button>
-      </div>
-    </form>
-
-    <table id="tb-impp">
-      <thead><tr><th>ID</th><th>Descrição</th><th>Tributo</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Imposto do Mês -->
-  <section id="t-impm" class="card p-3 hidden">
-    <form id="f-impm" class="grid4 mb-3">
-      <input type="hidden" name="id" />
-      <div><label class="text-sm">Mês/Ano</label><input type="month" name="mes" /></div>
-      <div><label class="text-sm">Tributo</label><input name="tributo" /></div>
-      <div><label class="text-sm">Vencimento</label><input type="date" name="vencimento" /></div>
-      <div><label class="text-sm">Valor</label><input name="valor" /></div>
-      <div><label class="text-sm">Pago</label><select name="pago"><option>Não</option><option>Sim</option></select></div>
-      <div class="col-span-3"><label class="text-sm">Obs</label><input name="obs" /></div>
-      <div class="col-span-4 flex gap-2">
-        <button class="btn" type="submit">Salvar</button>
-        <button class="btn" type="button" id="fx-impm">Limpar</button>
-      </div>
-    </form>
-
-    <table id="tb-impm">
-      <thead><tr><th>Mês/Ano</th><th>Tributo</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Obs</th><th>Atualizado</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Resumo -->
-  <section id="t-resumo" class="card p-3 hidden">
-    <div class="grid3 gap-3">
-      <div class="card p-3"><div class="opacity-70 text-sm">Créditos (Total)</div><div id="kCred" class="text-lg font-semibold">R$ 0,00</div></div>
-      <div class="card p-3"><div class="opacity-70 text-sm">Folha (Total)</div><div id="kFolha" class="text-lg font-semibold">R$ 0,00</div></div>
-      <div class="card p-3"><div class="opacity-70 text-sm">Fixas Pendentes</div><div id="kFixPend" class="text-lg font-semibold">R$ 0,00</div></div>
+  <!-- CONTEÚDO -->
+  <main id="app" class="p-4">
+    <!-- Totais -->
+    <div id="totais" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div class="card">Funcionários: <b id="tFunc">R$ 0,00</b></div>
+      <div class="card">Fixas: <b id="tFixas">R$ 0,00</b></div>
+      <div class="card">A Receber: <b id="tReceber">R$ 0,00</b></div>
+      <div class="card">Recebido: <b id="tRecebido">R$ 0,00</b></div>
     </div>
-  </section>
+
+    <!-- Tabs -->
+    <nav class="flex gap-2 mb-4 flex-wrap">
+      <button class="tab px-3 py-1 rounded bg-slate-700 active" data-tab="funcionarios">Funcionários</button>
+      <button class="tab px-3 py-1 rounded bg-slate-700" data-tab="creditos">Créditos</button>
+      <button class="tab px-3 py-1 rounded bg-slate-700" data-tab="contasfixas">Contas Fixas</button>
+      <button class="tab px-3 py-1 rounded bg-slate-700" data-tab="contasempresa">Contas da Empresa</button>
+      <button class="tab px-3 py-1 rounded bg-slate-700" data-tab="impostosparcelados">Impostos Parcelados</button>
+      <button class="tab px-3 py-1 rounded bg-slate-700" data-tab="impostomes">Imposto do Mês</button>
+      <button class="tab px-3 py-1 rounded bg-slate-700" data-tab="resumo">Resumo</button>
+    </nav>
+
+    <!-- Panels -->
+    <section id="tab-funcionarios" class="card">Interface Funcionários</section>
+    <section id="tab-creditos" class="card hidden">Interface Créditos</section>
+    <section id="tab-contasfixas" class="card hidden">Interface Contas Fixas</section>
+    <section id="tab-contasempresa" class="card hidden">Interface Contas da Empresa</section>
+    <section id="tab-impostosparcelados" class="card hidden">Interface Impostos Parcelados</section>
+    <section id="tab-impostomes" class="card hidden">Interface Imposto do Mês</section>
+    <section id="tab-resumo" class="card hidden">Interface Resumo</section>
+  </main>
 
   <script>
-    // Tabs
-    document.querySelectorAll('.tab').forEach(t=>{
-      t.addEventListener('click', ()=>{
-        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-        document.querySelectorAll('section').forEach(x=>x.classList.add('hidden'));
-        t.classList.add('active');
-        document.querySelector(t.dataset.t).classList.remove('hidden');
+    // === PIN ===
+    const PIN_CODE = '2400';
+    const PIN_KEY  = 'grantop_v2_pin';
+    const PIN_TTL  = 24*60*60*1000;
+
+    function restorePin() {
+      try {
+        const raw = localStorage.getItem(PIN_KEY);
+        if (!raw) return false;
+        const { v, t } = JSON.parse(raw);
+        if (v !== PIN_CODE) return false;
+        if (Date.now() - t > PIN_TTL) { localStorage.removeItem(PIN_KEY); return false; }
+        return true;
+      } catch { return false; }
+    }
+    function savePin() { localStorage.setItem(PIN_KEY, JSON.stringify({ v: PIN_CODE, t: Date.now() })); }
+
+    function requirePin(startAppFn) {
+      const gate=document.getElementById('pin-gate');
+      const input=document.getElementById('pin-input');
+      const ok=document.getElementById('pin-ok');
+      const clr=document.getElementById('pin-clear');
+      const err=document.getElementById('pin-err');
+
+      function unlock(){ gate.style.display='none'; startAppFn(); }
+      function tryEnter(){
+        if(input.value.trim()===PIN_CODE){ savePin(); unlock(); }
+        else{ err.style.display='block'; input.select(); }
+      }
+
+      if(restorePin()){ unlock(); return; }
+
+      gate.style.display='flex'; input.focus();
+      ok.onclick=tryEnter; input.onkeydown=(e)=>{if(e.key==='Enter') tryEnter();}
+      clr.onclick=()=>{localStorage.removeItem(PIN_KEY); input.value=''; err.style.display='none'; input.focus();}
+    }
+
+    // === APP ===
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        tabs.forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('main section').forEach(sec=>sec.classList.add('hidden'));
+        document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
       });
     });
 
-    // Helpers
-    const money = n => Number(n||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-    const ymd = d => /^\d{4}-\d{2}-\d{2}$/.test(d||'') ? d : '';
-    const fmtPago = v => String(v||'Não').toLowerCase()==='sim'
-      ? '<span class="pill ok">Sim</span>' : '<span class="pill bad">Não</span>';
-
-    // Config / mês / resumo
-    function loadCfg(){
-      google.script.run.withSuccessHandler(cfg=>{
-        document.getElementById('cfg').textContent =
-          `Planilha conectada • ${cfg.mesAtualLabel} • TZ: ${cfg.tz}`;
-        mesVigente.value = cfg.mesAtualYYYYMM || '';
-      }).api_getConfig();
-    }
-    btnMesSalvar.onclick = () => {
-      const v = mesVigente.value;
-      if(!/^\d{4}-\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
-      google.script.run.withSuccessHandler(loadCfg)
-        .withFailureHandler(e=>alert(e.message||e))
-        .api_setMesAtual(v);
-    };
-    btnResumo.onclick = () => {
-      google.script.run.withSuccessHandler(()=>alert('Resumo Mensal atualizado!'))
-        .withFailureHandler(e=>alert(e.message||e))
-        .atualizarResumoMensal();
-    };
-
-    // ===== Funcionários
-    const fFunc = document.getElementById('f-func');
-    document.getElementById('fx-func').onclick = ()=>{ fFunc.reset(); fFunc.id.value=''; };
-    fFunc.addEventListener('submit', e=>{
-      e.preventDefault();
-      const rec = Object.fromEntries(new FormData(fFunc).entries());
-      google.script.run.withSuccessHandler(()=>{ fFunc.reset(); loadFunc(); })
-        .withFailureHandler(e=>alert(e.message||e))
-        .api_saveFuncionario(rec);
-    });
-    function loadFunc(){
-      google.script.run.withSuccessHandler(rows=>{
-        const tb = document.querySelector('#tb-func tbody'); tb.innerHTML='';
-        let tot=0;
-        rows.forEach(r=>{
-          tot += Number(r.total||0);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${r.id}</td><td>${r.funcionario||''}</td>
-            <td>${money(r.salario)}</td><td>${money(r.vt)}</td><td>${money(r.vr)}</td>
-            <td>${money(r.total)}</td><td>${r.atualizadoEm||''}</td>
-            <td class="flex gap-2">
-              <button class="btn" data-e="${r.id}">Editar</button>
-              <button class="btn" data-d="${r.id}">Excluir</button>
-            </td>`;
-          tb.appendChild(tr);
-        });
-        // editar/excluir
-        tb.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{
-          const r = rows.find(x=>String(x.id)===b.dataset.e); if(!r) return;
-          fFunc.funcionario.value=r.funcionario||''; fFunc.salario.value=r.salario||''; fFunc.vt.value=r.vt||''; fFunc.vr.value=r.vr||''; fFunc.id.value=r.id;
-          window.scrollTo({top:0, behavior:'smooth'});
-        });
-        tb.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
-          if(!confirm('Excluir funcionário?')) return;
-          google.script.run.withSuccessHandler(loadFunc).api_deleteFuncionario(b.dataset.d);
-        });
-        // resumo topo (folha)
-        document.getElementById('kFolha').textContent = money(tot);
-      }).api_listFuncionarios();
+    function connectAndLoad(){
+      document.getElementById('status').textContent = "Conectado";
     }
 
-    // ===== Créditos
-    const fCred = document.getElementById('f-cred');
-    document.getElementById('fx-cred').onclick = ()=>{ fCred.reset(); fCred.id.value=''; };
-    fCred.addEventListener('submit', e=>{
-      e.preventDefault();
-      const d = Object.fromEntries(new FormData(fCred).entries());
-      const obs = [
-        d.nf?`NF:${d.nf}`:'', d.boleto?`boleto:${d.boleto}`:'', d.venc?`venc:${d.venc}`:'', d.obs||''
-      ].filter(Boolean).join(' | ');
-      const rec = { id:d.id||undefined, data:d.data, cliente:d.cliente, servico:d.servico, valor:d.valor, pago:d.pago, obs };
-      google.script.run.withSuccessHandler(()=>{ fCred.reset(); loadCred(); })
-        .withFailureHandler(e=>alert(e.message||e))
-        .api_saveRegistro(rec);
-    });
-    function loadCred(){
-      google.script.run.withSuccessHandler(rows=>{
-        const tb = document.querySelector('#tb-cred tbody'); tb.innerHTML='';
-        let tot=0, receb=0, areceb=0;
-        const parseObs=(s)=>({ nf:(s.match(/NF:([^|]+)/i)||['',''])[1].trim(),
-          boleto:(s.match(/boleto:([^|]+)/i)||['',''])[1].trim(),
-          venc:(s.match(/venc:([\d-]+)/i)||['',''])[1],
-          resto:String(s||'').replace(/(?:NF:[^|]+|boleto:[^|]+|venc:[^|]+)\s*\|?\s*/gi,'').trim() });
-        rows.forEach(r=>{
-          tot += Number(r.valor||0);
-          if(String(r.pago||'Não')==='Sim') receb += Number(r.valor||0); else areceb += Number(r.valor||0);
-          const ex=parseObs(r.obs||r.observacoes);
-          const tr=document.createElement('tr');
-          tr.innerHTML=`
-            <td>${r.data||''}</td><td>${r.cliente||''}</td><td>${r.servico||r.endereco||''}</td>
-            <td>${money(r.valor)}</td><td>${ex.nf||''}</td><td>${ymd(ex.venc)||''}</td>
-            <td>${fmtPago(r.pago)}</td><td>${ex.resto||''}</td>
-            <td class="flex gap-2">
-              <button class="btn" data-ec="${r._rowId}">Editar</button>
-              <button class="btn" data-dc="${r._rowId}">Excluir</button>
-            </td>`;
-          tb.appendChild(tr);
-        });
-        tb.querySelectorAll('[data-ec]').forEach(b=>b.onclick=()=>{
-          const it=rows.find(x=>String(x._rowId)===b.dataset.ec); if(!it) return;
-          const ex=parseObs(it.obs||it.observacoes);
-          fCred.id.value=it._rowId; fCred.data.value=ymd(it.data); fCred.cliente.value=it.cliente||''; fCred.servico.value=it.servico||it.endereco||'';
-          fCred.valor.value=it.valor||''; fCred.nf.value=ex.nf||''; fCred.boleto.value=ex.boleto||''; fCred.venc.value=ymd(ex.venc)||''; fCred.pago.value=it.pago||'Não'; fCred.obs.value=ex.resto||'';
-          window.scrollTo({top:0, behavior:'smooth'});
-        });
-        tb.querySelectorAll('[data-dc]').forEach(b=>b.onclick=()=>{
-          if(!confirm('Excluir crédito?')) return;
-          google.script.run.withSuccessHandler(loadCred).api_deleteRegistro(b.dataset.dc);
-        });
-        document.getElementById('kCred').textContent = money(tot);
-      }).api_listRegistros();
-    }
+    function aplicarMes(){ alert("Aplicar mês (stub)"); }
+    function gerarResumo(){ alert("Gerar resumo (stub)"); }
 
-    // ===== Fixas
-    const fFix = document.getElementById('f-fixas');
-    document.getElementById('fx-fixas').onclick = ()=>{ fFix.reset(); fFix.id.value=''; };
-    fFix.addEventListener('submit', e=>{
-      e.preventDefault();
-      const d=Object.fromEntries(new FormData(fFix).entries());
-      const obs = [ d.rec==='Sim'?'[REC]':'', d.link?('link: '+d.link):'', d.obs||'' ].filter(Boolean).join(' | ');
-      const rec={ id:d.id||undefined, descricao:d.descricao, categoria:d.categoria, vencimento:d.vencimento, valor:d.valor, status:d.status, observacoes:obs };
-      google.script.run.withSuccessHandler(()=>{ fFix.reset(); loadFix(); })
-        .withFailureHandler(e=>alert(e.message||e)).api_saveContaFixa(rec);
-    });
-    function loadFix(){
-      google.script.run.withSuccessHandler(rows=>{
-        const tb=document.querySelector('#tb-fixas tbody'); tb.innerHTML='';
-        let pend=0;
-        rows.forEach(r=>{
-          if(String(r.status)!=='Pago') pend+=Number(r.valor||0);
-          const tr=document.createElement('tr');
-          tr.innerHTML=`
-            <td>${r.id}</td><td>${r.descricao||''}</td><td>${r.categoria||''}</td>
-            <td>${ymd(r.vencimento)||''}</td><td>${money(r.valor)}</td><td>${r.status||''}</td>
-            <td>${r.observacoes||''}</td><td>${r.atualizadoEm||''}</td>
-            <td class="flex gap-2">
-              <button class="btn" data-ex="${r.id}">Editar</button>
-              <button class="btn" data-dx="${r.id}">Excluir</button>
-            </td>`;
-          tb.appendChild(tr);
-        });
-        tb.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{
-          const it=rows.find(x=>String(x.id)===b.dataset.ex); if(!it) return;
-          const rec=/\[REC\]/i.test(it.observacoes||''); const m=(it.observacoes||'').match(/(?:link\s*:\s*)(\S+)/i);
-          fFix.id.value=it.id; fFix.descricao.value=it.descricao||''; fFix.categoria.value=it.categoria||''; fFix.vencimento.value=ymd(it.vencimento)||''; fFix.valor.value=it.valor||'';
-          fFix.status.value=it.status||'Pendente'; fFix.rec.value=rec?'Sim':'Não'; fFix.link.value=m?m[1]:''; fFix.obs.value=(String(it.observacoes||'').replace(/\s*\[REC\]\s*/i,'').replace(/\s*link\s*:\s*\S+\s*/i,'')).trim();
-          window.scrollTo({top:0, behavior:'smooth'});
-        });
-        tb.querySelectorAll('[data-dx]').forEach(b=>b.onclick=()=>{
-          if(!confirm('Excluir conta fixa?')) return;
-          google.script.run.withSuccessHandler(loadFix).api_deleteContaFixa(b.dataset.dx);
-        });
-        document.getElementById('kFixPend').textContent = money(pend);
-      }).api_listContasFixas();
-    }
-
-    // ===== Contas da Empresa
-    const fContas=document.getElementById('f-contas');
-    document.getElementById('fx-contas').onclick=()=>{ fContas.reset(); fContas.id.value=''; };
-    fContas.addEventListener('submit', e=>{
-      e.preventDefault();
-      const d=Object.fromEntries(new FormData(fContas).entries());
-      google.script.run.withSuccessHandler(()=>{ fContas.reset(); loadContas(); })
-        .withFailureHandler(e=>alert(e.message||e))
-        .api_saveContaEmpresa(d);
-    });
-    function loadContas(){
-      google.script.run.withSuccessHandler(rows=>{
-        const tb=document.querySelector('#tb-contas tbody'); tb.innerHTML='';
-        rows.forEach(r=>{
-          const tr=document.createElement('tr');
-          tr.innerHTML=`
-            <td>${r.id}</td><td>${r.banco||''}</td><td>${r.tipo||''}</td><td>${r.agencia||''}</td><td>${r.conta||''}</td>
-            <td>${r.pix||''}</td><td>${r.obs||''}</td><td>${r.atualizadoEm||''}</td>
-            <td class="flex gap-2">
-              <button class="btn" data-ec2="${r.id}">Editar</button>
-              <button class="btn" data-dc2="${r.id}">Excluir</button>
-            </td>`;
-          tb.appendChild(tr);
-        });
-        tb.querySelectorAll('[data-ec2]').forEach(b=>b.onclick=()=>{
-          const it=rows.find(x=>String(x.id)===b.dataset.ec2); if(!it) return;
-          fContas.id.value=it.id; fContas.banco.value=it.banco||''; fContas.tipo.value=it.tipo||''; fContas.agencia.value=it.agencia||''; fContas.conta.value=it.conta||'';
-          fContas.pix.value=it.pix||''; fContas.obs.value=it.obs||'';
-          window.scrollTo({top:0, behavior:'smooth'});
-        });
-        tb.querySelectorAll('[data-dc2]').forEach(b=>b.onclick=()=>{
-          if(!confirm('Excluir conta?')) return;
-          google.script.run.withSuccessHandler(loadContas).api_deleteContaEmpresa(b.dataset.dc2);
-        });
-      }).api_listContasEmpresa();
-    }
-
-    // ===== Impostos Parcelados
-    const fImpp=document.getElementById('f-impp');
-    document.getElementById('fx-impp').onclick=()=>{ fImpp.reset(); fImpp.id.value=''; };
-    fImpp.addEventListener('submit', e=>{
-      e.preventDefault();
-      const d=Object.fromEntries(new FormData(fImpp).entries());
-      google.script.run.withSuccessHandler(()=>{ fImpp.reset(); loadImpp(); })
-        .withFailureHandler(e=>alert(e.message||e))
-        .api_saveImpParcelado(d);
-    });
-    function loadImpp(){
-      google.script.run.withSuccessHandler(rows=>{
-        const tb=document.querySelector('#tb-impp tbody'); tb.innerHTML='';
-        rows.forEach(r=>{
-          const tr=document.createElement('tr');
-          tr.innerHTML=`
-            <td>${r.id}</td><td>${r.descricao||''}</td><td>${r.tributo||''}</td><td>${r.parcela||''}</td>
-            <td>${ymd(r.vencimento)||''}</td><td>${money(r.valor)}</td><td>${r.pago||''}</td>
-            <td>${r.obs||''}</td><td>${r.atualizadoEm||''}</td>
-            <td class="flex gap-2">
-              <button class="btn" data-ei="${r.id}">Editar</button>
-              <button class="btn" data-di="${r.id}">Excluir</button>
-            </td>`;
-          tb.appendChild(tr);
-        });
-        tb.querySelectorAll('[data-ei]').forEach(b=>b.onclick=()=>{
-          const it=rows.find(x=>String(x.id)===b.dataset.ei); if(!it) return;
-          fImpp.id.value=it.id; fImpp.descricao.value=it.descricao||''; fImpp.tributo.value=it.tributo||''; fImpp.parcela.value=it.parcela||'';
-          fImpp.vencimento.value=ymd(it.vencimento)||''; fImpp.valor.value=it.valor||''; fImpp.pago.value=it.pago||'Não'; fImpp.obs.value=it.obs||'';
-          window.scrollTo({top:0, behavior:'smooth'});
-        });
-        tb.querySelectorAll('[data-di]').forEach(b=>b.onclick=()=>{
-          if(!confirm('Excluir imposto parcelado?')) return;
-          google.script.run.withSuccessHandler(loadImpp).api_deleteImpParcelado(b.dataset.di);
-        });
-      }).api_listImpParcelados();
-    }
-
-    // ===== Imposto do Mês
-    const fImpm=document.getElementById('f-impm');
-    document.getElementById('fx-impm').onclick=()=>{ fImpm.reset(); fImpm.id.value=''; };
-    fImpm.addEventListener('submit', e=>{
-      e.preventDefault();
-      const d=Object.fromEntries(new FormData(fImpm).entries());
-      const rec={ id:d.id||undefined, mesAno:d.mes, tributo:d.tributo, vencimento:d.vencimento, valor:d.valor, pago:d.pago, obs:d.obs };
-      google.script.run.withSuccessHandler(()=>{ fImpm.reset(); loadImpm(); })
-        .withFailureHandler(e=>alert(e.message||e))
-        .api_saveImpostoMes(rec);
-    });
-    function loadImpm(){
-      google.script.run.withSuccessHandler(rows=>{
-        const tb=document.querySelector('#tb-impm tbody'); tb.innerHTML='';
-        rows.forEach(r=>{
-          const tr=document.createElement('tr');
-          tr.innerHTML=`
-            <td>${r.mesAno||''}</td><td>${r.tributo||''}</td><td>${ymd(r.vencimento)||''}</td>
-            <td>${money(r.valor)}</td><td>${r.pago||''}</td><td>${r.obs||''}</td><td>${r.atualizadoEm||''}</td>
-            <td class="flex gap-2">
-              <button class="btn" data-em="${r._rowId}">Editar</button>
-              <button class="btn" data-dm="${r._rowId}">Excluir</button>
-            </td>`;
-          tb.appendChild(tr);
-        });
-        tb.querySelectorAll('[data-em]').forEach(b=>b.onclick=()=>{
-          const it=rows.find(x=>String(x._rowId)===b.dataset.em); if(!it) return;
-          fImpm.id.value=it._rowId; fImpm.mes.value=it.mesAno||''; fImpm.tributo.value=it.tributo||''; fImpm.vencimento.value=ymd(it.vencimento)||''; fImpm.valor.value=it.valor||''; fImpm.pago.value=it.pago||'Não'; fImpm.obs.value=it.obs||'';
-          window.scrollTo({top:0, behavior:'smooth'});
-        });
-        tb.querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{
-          if(!confirm('Excluir imposto do mês?')) return;
-          google.script.run.withSuccessHandler(loadImpm).api_deleteImpostoMes(b.dataset.dm);
-        });
-      }).api_listImpostoMes();
-    }
-
-    // Boot
-    function boot(){
-      loadCfg();
-      loadFunc(); loadCred(); loadFix(); loadContas(); loadImpp(); loadImpm();
-    }
-    boot();
+    (function init(){ requirePin(connectAndLoad); })();
   </script>
 </body>
 </html>
