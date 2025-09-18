@@ -12,8 +12,8 @@
     window.GRANTOP_CFG = {
       API_URL: "https://script.google.com/macros/s/AKfycbxafgl58OWufH04mqeI4k-M2JI5BcXWmyvCjnpoRZsvdgM1n6r247gg4Aq_bKyoPzmb/exec",
       TOKEN  : "2400",
-      SS_ID  : "",        // (opcional) cole o ID da planilha p/ habilitar "Abrir planilha"
-      UI_PIN : "2400"     // PIN simples (front-end)
+      SS_ID  : "",      // opcional: id da planilha para link "Abrir planilha"
+      UI_PIN : "2400"   // PIN simples no HTML
     };
   </script>
 
@@ -73,12 +73,30 @@
 
   <!-- INDICADORES -->
   <section class="p-4 grid grid-cols-1 md:grid-cols-6 gap-3">
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Créditos (Total)</div><div class="big" id="kCredTot">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Folha (Total)</div><div class="big" id="kFolhaTot">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Fixas Pendentes</div><div class="big" id="kFixPend">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Saldo Previsto</div><div class="big" id="kSaldoPrevTop">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Valor a Receber</div><div class="big" id="kAReceber">R$ 0,00</div></div>
-    <div class="kcard card p-3 md:col-span-1"><div class="text-sm opacity-70">Valor Recebido</div><div class="big" id="kRecebido">R$ 0,00</div></div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Créditos (Total)</div>
+      <div class="big" id="kCredTot">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Folha (Total)</div>
+      <div class="big" id="kFolhaTot">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Fixas Pendentes</div>
+      <div class="big" id="kFixPend">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Saldo Previsto</div>
+      <div class="big" id="kSaldoPrevTop">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Valor a Receber</div>
+      <div class="big" id="kAReceber">R$ 0,00</div>
+    </div>
+    <div class="kcard card p-3 md:col-span-1">
+      <div class="text-sm opacity-70">Valor Recebido</div>
+      <div class="big" id="kRecebido">R$ 0,00</div>
+    </div>
   </section>
 
   <!-- NAV -->
@@ -100,12 +118,20 @@
     <!-- FUNCIONÁRIOS -->
     <section id="tab-func" class="card p-4">
       <h2 class="font-semibold mb-3">Funcionários</h2>
+
       <form id="formFunc" class="grid md:grid-cols-6 gap-3 items-end">
         <div class="md:col-span-2"><label class="block text-sm mb-1">Funcionário</label><input id="fnNome" required /></div>
         <div><label class="block text-sm mb-1">Salário (R$)</label><input id="fnSal" inputmode="decimal" /></div>
-        <div class="grid md:grid-cols-2 gap-3 md:col-span-2">
-          <div><label class="block text-sm mb-1">VT (R$)</label><input id="fnVT" inputmode="decimal" /></div>
-          <div><label class="block text-sm mb-1">VR (R$)</label><input id="fnVR" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">% Adicional</label><input id="fnAdic" inputmode="decimal" value="0" /></div>
+        <div><label class="block text-sm mb-1">Diárias (qtd)</label><input id="fnDiaQtd" inputmode="numeric" value="0" /></div>
+        <div><label class="block text-sm mb-1">Valor da diária (R$)</label><input id="fnDiaVal" inputmode="decimal" value="0,00" /></div>
+        <div><label class="block text-sm mb-1">VT (R$)</label><input id="fnVT" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">VR (R$)</label><input id="fnVR" inputmode="decimal" /></div>
+        <div><label class="block text-sm mb-1">Descontos (R$)</label><input id="fnDesc" inputmode="decimal" value="0,00" /></div>
+        <div class="md:col-span-2">
+          <div class="text-sm mb-1">Total (prévia)</div>
+          <div id="fnTotalPrev" class="text-xl font-semibold">R$ 0,00</div>
+          <div class="text-xs opacity-70">Total = Salário + (Salário × %Adic) + (Diárias × Valor) − Descontos + VT + VR</div>
         </div>
         <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="fnClear">Limpar</button></div>
         <input type="hidden" id="fnId" />
@@ -113,7 +139,7 @@
 
       <div class="mt-6 overflow-x-auto">
         <table>
-          <thead><tr><th>ID</th><th>Funcionário</th><th>Salário</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th><th>Ações</th></tr></thead>
+          <thead><tr><th>ID</th><th>Funcionário</th><th>Salário (ajustado)</th><th>VT</th><th>VR</th><th>Total</th><th>Atualizado</th><th>Ações</th></tr></thead>
           <tbody id="tbodyFunc"></tbody>
         </table>
         <div id="fnEmpty" class="text-xs text-slate-400 mt-2 hidden">Sem funcionários.</div>
@@ -123,6 +149,7 @@
     <!-- CRÉDITOS -->
     <section id="tab-creditos" class="card p-4 hidden">
       <h2 class="font-semibold mb-3">Créditos (Faturamento)</h2>
+
       <form id="formCred" class="grid md:grid-cols-6 gap-3 items-end">
         <div><label class="block text-sm mb-1">Data</label><input id="crData" type="date" required /></div>
         <div class="md:col-span-2"><label class="block text-sm mb-1">Cliente</label><input id="crCliente" required /></div>
@@ -250,14 +277,15 @@
       </div>
     </section>
 
-    <!-- CLIENTES (NOVO) -->
+    <!-- CLIENTES -->
     <section id="tab-clientes" class="card p-4 hidden">
       <h2 class="font-semibold mb-3">Clientes</h2>
+
       <form id="formCli" class="grid md:grid-cols-6 gap-3 items-end">
         <div class="md:col-span-2"><label class="block text-sm mb-1">Nome</label><input id="clNome" required /></div>
         <div><label class="block text-sm mb-1">Telefone</label><input id="clTel" /></div>
-        <div><label class="block text-sm mb-1">E-mail</label><input id="clMail" /></div>
-        <div><label class="block text-sm mb-1">Empresa</label><input id="clEmp" /></div>
+        <div class="md:col-span-2"><label class="block text-sm mb-1">E-mail</label><input id="clEmail" /></div>
+        <div class="md:col-span-2"><label class="block text-sm mb-1">Empresa</label><input id="clEmpresa" /></div>
         <div class="md:col-span-6 flex gap-2"><button class="btn" type="submit">Salvar</button><button class="btn" type="button" id="clClear">Limpar</button></div>
         <input type="hidden" id="clId" />
       </form>
@@ -289,13 +317,11 @@
 
     const moneyBR = v => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const toNumberBR = v => v? Number(String(v).replace(/\./g,'').replace(',','.'))||0 : 0;
-
     const fmtDateBR = (val) => {
       if (!val) return '';
       const s = String(val).split('T')[0];
       return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('/') : s;
     };
-
     function showError(msg){ const el=err; el.textContent=String(msg||'Erro'); el.classList.remove('hidden'); }
     function hideError(){ err.classList.add('hidden'); err.textContent=''; }
 
@@ -349,16 +375,16 @@
       saveImpMes: (p)=>jsonp(API_URL+'?action=saveimpmes&payload='+encodeURIComponent(JSON.stringify(p))),
       delImpMes:  (id)=>jsonp(API_URL+'?action=delimpmes&id='+encodeURIComponent(id)),
 
-      // Clientes (novo)
+      // Clientes
       listCli:   ()=>jsonp(API_URL+'?action=listclientes'),
       saveCli:   (p)=>jsonp(API_URL+'?action=savecliente&payload='+encodeURIComponent(JSON.stringify(p))),
-      delCli:    (id)=>jsonp(API_URL+'?action=deletecliente&id='+encodeURIComponent(id)),
+      delCli:    (id)=>jsonp(API_URL+'?action=delcliente&id='+encodeURIComponent(id)),
 
       // resumo
       resumo:   ()=>jsonp(API_URL+'?action=resumo')
     };
 
-    // ===== Tabs
+    // ===== Estado/UI
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(b=>b.addEventListener('click',()=>{
       tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
@@ -369,11 +395,24 @@
       if(t==='resumo') renderResumoCards();
     }));
 
-    // ===== Conexão/Mês
     const connEl = document.getElementById('conn');
     const setConn = (t,cls)=>{ connEl.textContent=t; connEl.className='text-xs '+(cls||'text-slate-300'); };
-    const mesInput = document.getElementById('mesVigente');
 
+    let cacheFunc=[], cacheFixas=[], cacheFixasRaw=[], cacheCred=[];
+    let cacheContas=[], cacheImpParc=[], cacheImpMes=[], cacheCli=[];
+    document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
+
+    // ===== Helpers de mês: garante backend alinhado ao mês da data
+    const mesInput = document.getElementById('mesVigente');
+    function pickYYYYMM(ymd){ return /^\d{4}-\d{2}-\d{2}$/.test(String(ymd||'')) ? ymd.slice(0,7) : null; }
+    function ensureMonth(yyyymm){
+      if(!/^\d{4}-\d{2}$/.test(String(yyyymm||''))) return Promise.resolve();
+      if(mesInput.value === yyyymm) return Promise.resolve();
+      mesInput.value = yyyymm;
+      return api.setMonth(yyyymm).then(()=>{});
+    }
+
+    // ===== MÊS VIGENTE
     document.getElementById('btnMesSalvar').addEventListener('click', ()=>{
       const v = mesInput.value; // yyyy-mm
       if(!/^\d{4}-\d{2}$/.test(v)){ alert('Selecione um mês válido.'); return; }
@@ -381,17 +420,28 @@
         if(!r||!r.ok){ alert('Falha ao definir mês.'); return; }
         const info = r.result || r; // tolerância
         document.getElementById('sumMsg').textContent = 'Resumo atualizado para '+ (info.mesAtualLabel || '');
-        // recarrega dados respeitando o mês em vigor (Apps Script centraliza)
-        connectAndLoad();
-      });
+        connectAndLoad(); // recarrega tudo no mês escolhido
+      }).catch(ex=>showError(ex.message));
     });
 
-    // ===== Estado
-    let cacheFunc=[], cacheFixas=[], cacheFixasRaw=[], cacheCred=[];
-    let cacheContas=[], cacheImpParc=[], cacheImpMes=[], cacheCli=[];
-    document.getElementById('linkPlanilha').href = SS_ID ? ('https://docs.google.com/spreadsheets/d/'+SS_ID+'/edit') : '#';
-
     // ===== Funcionários
+    function calcPrev(){
+      const sal=toNumberBR(document.getElementById('fnSal').value);
+      const ad =toNumberBR(document.getElementById('fnAdic').value);
+      const dq =Number(document.getElementById('fnDiaQtd').value||0);
+      const dv =toNumberBR(document.getElementById('fnDiaVal').value);
+      const vt =toNumberBR(document.getElementById('fnVT').value);
+      const vr =toNumberBR(document.getElementById('fnVR').value);
+      const ds =toNumberBR(document.getElementById('fnDesc').value);
+      const salAdj = sal + (sal*ad/100) + (dq*dv) - ds;
+      const total = salAdj + vt + vr;
+      document.getElementById('fnTotalPrev').textContent = 'R$ '+moneyBR(total);
+      return {salAdj,total};
+    }
+    ['fnSal','fnAdic','fnDiaQtd','fnDiaVal','fnVT','fnVR','fnDesc'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', calcPrev);
+    });
+
     function renderFuncionarios(list){
       cacheFunc=list.slice();
       const tb=document.getElementById('tbodyFunc'); tb.innerHTML='';
@@ -399,7 +449,7 @@
       list.forEach(r=>{
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${r.id}</td><td>${r.funcionario||'-'}</td>
-          <td>R$ ${moneyBR(r.salario||0)}</td><td>R$ ${moneyBR(r.vt||0)}</td><td>R$ ${moneyBR(r.vr||0)}</td>
+          <td>R$ ${moneyBR(r.salario||r.salarioBase||0)}</td><td>R$ ${moneyBR(r.vt||0)}</td><td>R$ ${moneyBR(r.vr||0)}</td>
           <td>R$ ${moneyBR(r.total||0)}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
           <td><button class="btn js-edit-f" data-id="${r.id}">Editar</button> <button class="btn js-del-f" data-id="${r.id}">Excluir</button></td>`;
         tb.appendChild(tr);
@@ -407,21 +457,25 @@
       renderResumoCards();
       recalcTopCards();
     }
+
     document.getElementById('formFunc').addEventListener('submit', e=>{
       e.preventDefault();
-      const payload={ id:fnId.value||undefined, funcionario:fnNome.value.trim(), salario:toNumberBR(fnSal.value), vt:toNumberBR(fnVT.value), vr:toNumberBR(fnVR.value) };
+      const k = calcPrev();
+      const payload={ id:fnId.value||undefined, funcionario:fnNome.value.trim(), salario:k.salAdj, vt:toNumberBR(fnVT.value), vr:toNumberBR(fnVR.value) };
       api.saveFunc(payload).then(r=>{
         if(!r||!r.ok){ alert('Falha ao salvar.'); return; }
-        e.target.reset(); fnId.value=''; loadFuncionarios();
+        e.target.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00';
+        loadFuncionarios();
       }).catch(ex=>showError(ex.message));
     });
-    document.getElementById('fnClear').addEventListener('click', ()=>{ formFunc.reset(); fnId.value=''; });
+    document.getElementById('fnClear').addEventListener('click', ()=>{ formFunc.reset(); fnId.value=''; document.getElementById('fnTotalPrev').textContent='R$ 0,00'; });
     document.body.addEventListener('click', ev=>{
       const t=ev.target;
       if(t.classList.contains('js-edit-f')){
         const id=t.dataset.id;
         const it=cacheFunc.find(x=>String(x.id)===String(id)); if(!it) return;
-        fnId.value=it.id; fnNome.value=it.funcionario||''; fnSal.value=String(it.salario||'').replace('.',','); fnVT.value=String(it.vt||'').replace('.',','); fnVR.value=String(it.vr||'').replace('.',',');
+        fnId.value=it.id; fnNome.value=it.funcionario||''; fnSal.value=String(it.salario||it.salarioBase||'').replace('.',','); fnAdic.value='0'; fnDiaQtd.value='0'; fnDiaVal.value='0,00';
+        fnVT.value=String(it.vt||'').replace('.',','); fnVR.value=String(it.vr||'').replace('.',','); fnDesc.value='0,00'; calcPrev();
         window.scrollTo({top:0, behavior:'smooth'});
       }
       if(t.classList.contains('js-del-f')){
@@ -442,10 +496,11 @@
       const mV =obs.match(/venc:([\d-]+)/i);
       return { nf:mNF?mNF[1].trim():'', boleto:mL?mL[1].trim():'', venc:mV?mV[1].trim():'', resto:obs };
     }
-    const badgePago = val => (String(val||'').trim().toLowerCase()==='sim'
-      ? '<span class="badge badge-green">Sim</span>'
-      : '<span class="badge badge-red">Não</span>');
-
+    function badgePago(val){
+      const s = String(val||'').trim().toLowerCase();
+      if(s==='sim') return '<span class="badge badge-green">Sim</span>';
+      return '<span class="badge badge-red">Não</span>';
+    }
     function renderCreditos(list){
       cacheCred=list.slice();
       const tb=document.getElementById('tbodyCred'); tb.innerHTML='';
@@ -466,10 +521,13 @@
       e.preventDefault();
       const obs = extrasToObs(crNF.value.trim(), crBoleto.value.trim(), crVenc.value, crObs.value.trim());
       const payload={ id:crId.value||undefined, data:crData.value, cliente:crCliente.value.trim(), servico:crServico.value.trim(), valor:toNumberBR(crValor.value), pago:crPago.value, obs };
-      api.saveCred(payload).then(r=>{
-        if(!r||!r.ok){ alert('Falha ao salvar crédito.'); return; }
-        e.target.reset(); crId.value=''; loadCreditos();
-      }).catch(ex=>showError(ex.message));
+      const yyyymm = pickYYYYMM(crData.value) || mesInput.value;
+      ensureMonth(yyyymm)
+        .then(()=> api.saveCred(payload))
+        .then(r=>{
+          if(!r||!r.ok){ alert('Falha ao salvar crédito.'); return; }
+          e.target.reset(); crId.value=''; connectAndLoad();
+        }).catch(ex=>showError(ex.message));
     });
     document.getElementById('crClear').addEventListener('click', ()=>{ formCred.reset(); crId.value=''; });
     document.body.addEventListener('click', ev=>{
@@ -519,7 +577,11 @@
       e.preventDefault();
       const obs=buildObs(cxRec.value, cxLink.value.trim(), cxObs.value.trim());
       const p={ id:cxId.value||undefined, descricao:cxDesc.value.trim(), categoria:cxCat.value.trim(), vencimento:cxVenc.value, valor:toNumberBR(cxValor.value), status:cxStatus.value, observacoes:obs };
-      api.saveFix(p).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); cxId.value=''; loadFixas(); }).catch(ex=>showError(ex.message));
+      const yyyymm = pickYYYYMM(cxVenc.value) || mesInput.value;
+      ensureMonth(yyyymm)
+        .then(()=> api.saveFix(p))
+        .then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); cxId.value=''; connectAndLoad(); })
+        .catch(ex=>showError(ex.message));
     });
     cxClear.addEventListener('click', ()=>{ formFixa.reset(); cxId.value=''; });
     document.body.addEventListener('click', ev=>{
@@ -585,7 +647,11 @@
     formImpParc.addEventListener('submit', e=>{
       e.preventDefault();
       const p={ id:ipId.value||undefined, descricao:ipDesc.value.trim(), tributo:ipTributo.value.trim(), parcela:ipParcela.value.trim(), vencimento:ipVenc.value, valor:toNumberBR(ipValor.value), pago:ipPago.value, obs:ipObs.value.trim() };
-      api.saveImpParc(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); ipId.value=''; loadImpParc(); }).catch(ex=>showError(ex.message));
+      const yyyymm = pickYYYYMM(ipVenc.value) || mesInput.value;
+      ensureMonth(yyyymm)
+        .then(()=> api.saveImpParc(p))
+        .then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); ipId.value=''; connectAndLoad(); })
+        .catch(ex=>showError(ex.message));
     });
     ipClear.addEventListener('click', ()=>{ formImpParc.reset(); ipId.value=''; });
     document.body.addEventListener('click', ev=>{
@@ -611,21 +677,25 @@
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${r.mesAno||''}</td><td>${r.tributo||''}</td><td>${fmtDateBR(r.vencimento)}</td>
           <td>R$ ${moneyBR(r.valor)}</td><td>${r.pago||''}</td><td>${r.obs||''}</td><td>${fmtDateBR(r.atualizadoEm)}</td>
-          <td><button class="btn js-edit-im" data-id="${r._rowId}">Editar</button> <button class="btn js-del-im" data-id="${r._rowId}">Excluir</button></td>`;
+          <td><button class="btn js-edit-im" data-id="${r._rowId||r.id}">Editar</button> <button class="btn js-del-im" data-id="${r._rowId||r.id}">Excluir</button></td>`;
         tb.appendChild(tr);
       });
     }
     formImpMes.addEventListener('submit', e=>{
       e.preventDefault();
       const p={ id:imId.value||undefined, mesAno:imMes.value, tributo:imTributo.value.trim(), vencimento:imVenc.value, valor:toNumberBR(imValor.value), pago:imPago.value, obs:imObs.value.trim() };
-      api.saveImpMes(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); imId.value=''; loadImpMes(); }).catch(ex=>showError(ex.message));
+      const yyyymm = imMes.value || mesInput.value;
+      ensureMonth(yyyymm)
+        .then(()=> api.saveImpMes(p))
+        .then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); imId.value=''; connectAndLoad(); })
+        .catch(ex=>showError(ex.message));
     });
     imClear.addEventListener('click', ()=>{ formImpMes.reset(); imId.value=''; });
     document.body.addEventListener('click', ev=>{
       const t=ev.target;
       if(t.classList.contains('js-edit-im')){
-        const it=cacheImpMes.find(x=>String(x._rowId)===String(t.dataset.id)); if(!it) return;
-        imId.value=it._rowId; imMes.value=(it.mesAno||''); imTributo.value=it.tributo||''; imVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; imValor.value=String(it.valor).replace('.',','); imPago.value=it.pago||'Não'; imObs.value=it.obs||'';
+        const it=cacheImpMes.find(x=>String(x._rowId||x.id)===String(t.dataset.id)); if(!it) return;
+        imId.value=it._rowId||it.id; imMes.value=(it.mesAno||it.mes||''); imTributo.value=it.tributo||''; imVenc.value=/^\d{4}-\d{2}-\d{2}$/.test(it.vencimento)?it.vencimento:''; imValor.value=String(it.valor).replace('.',','); imPago.value=it.pago||'Não'; imObs.value=it.obs||'';
         window.scrollTo({top:0, behavior:'smooth'});
       }
       if(t.classList.contains('js-del-im')){
@@ -636,7 +706,7 @@
 
     // ===== Clientes
     function renderClientes(list){
-      cacheCli=list.slice();
+      cacheCli = list.slice();
       const tb=tbodyCli; tb.innerHTML='';
       clEmpty.classList.toggle('hidden', list.length>0);
       list.forEach(r=>{
@@ -648,20 +718,20 @@
     }
     formCli.addEventListener('submit', e=>{
       e.preventDefault();
-      const p={ id:clId.value||undefined, nome:clNome.value.trim(), telefone:clTel.value.trim(), email:clMail.value.trim(), empresa:clEmp.value.trim() };
-      api.saveCli(p).then(r=>{ if(!r||!r.ok){alert('Falha ao salvar.');return;} e.target.reset(); clId.value=''; loadClientes(); }).catch(ex=>showError(ex.message));
+      const p={ id:clId.value||undefined, nome:clNome.value.trim(), telefone:clTel.value.trim(), email:clEmail.value.trim(), empresa:clEmpresa.value.trim() };
+      api.saveCli(p).then(r=>{ if(!r||!r.ok){ alert('Falha ao salvar.'); return; } e.target.reset(); clId.value=''; loadClientes(); }).catch(ex=>showError(ex.message));
     });
     clClear.addEventListener('click', ()=>{ formCli.reset(); clId.value=''; });
     document.body.addEventListener('click', ev=>{
       const t=ev.target;
       if(t.classList.contains('js-edit-cl')){
         const it=cacheCli.find(x=>String(x.id)===String(t.dataset.id)); if(!it) return;
-        clId.value=it.id; clNome.value=it.nome||''; clTel.value=it.telefone||''; clMail.value=it.email||''; clEmp.value=it.empresa||'';
+        clId.value=it.id; clNome.value=it.nome||''; clTel.value=it.telefone||''; clEmail.value=it.email||''; clEmpresa.value=it.empresa||'';
         window.scrollTo({top:0, behavior:'smooth'});
       }
       if(t.classList.contains('js-del-cl')){
-        const id=t.dataset.id; if(!confirm('Excluir cliente?')) return;
-        api.delCli(id).then(r=>{ if(!r||!r.ok){alert('Falha ao excluir.');return;} loadClientes(); }).catch(ex=>showError(ex.message));
+        const id=t.dataset.id; if(!confirm('Excluir cliente '+id+'?')) return;
+        api.delCli(id).then(r=>{ if(!r||!r.ok){ alert('Falha ao excluir.'); return; } loadClientes(); }).catch(ex=>showError(ex.message));
       }
     });
 
@@ -727,8 +797,6 @@
           renderImpMes(all[7]?.result||[]);
           renderClientes(all[8]?.result||[]);
           recalcTopCards();
-          // Atualiza mensagem de resumo com o label atual
-          if (cfg.mesAtualLabel) document.getElementById('sumMsg').textContent = 'Resumo para '+cfg.mesAtualLabel+'.';
         })
         .catch((err)=>{ console.error(err); setConn('Erro','text-rose-300'); showError('Falha ao conectar.'); });
     }
